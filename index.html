@@ -191,7 +191,8 @@
   "theme": "light",
   "verifyResults": ["Done","FAIL"],
   "verifyChips": ["하여 Done 처리","하여 Reopen 처리"],
-  "reportItems": ["TC 작성","Test DATA 셋팅","TC 수행","이슈 등록","이슈 확인","Declined 이슈","기타"]
+  "reportItems": ["TC 작성","Test DATA 셋팅","TC 수행","이슈 등록","이슈 확인","Declined 이슈","기타"],
+  "reportChips": ["- 팀 오전회의(0.5H)","- 모니터링(0.5H)","- 정기배포 참여","- 교육/세미나"]
 }
 </script>
 
@@ -1193,6 +1194,61 @@
       [cnt, tm, ta].forEach(function(el){ el.addEventListener("input", rptUpdate); });
       head.appendChild(nm); head.appendChild(cnt); head.appendChild(tm);
       row.appendChild(head); row.appendChild(ta);
+
+      /* 기타 항목: 자주 쓰는 문구 블록 */
+      if(name === "기타"){
+        var chipWrap = document.createElement("div");
+        chipWrap.className = "quickchips";
+        var chipEditBox = document.createElement("div");
+        chipEditBox.style.cssText = "display:none;margin-top:8px;border:1px solid var(--accent);border-radius:10px;padding:12px";
+        var chipHint = document.createElement("div");
+        chipHint.className = "hint";
+        chipHint.style.margin = "0 0 8px";
+        chipHint.textContent = "자주 쓰는 문구를 한 줄에 하나씩 적으세요. 적용하면 자동 저장돼서 다음에도 유지돼요.";
+        var chipTa = document.createElement("textarea");
+        chipTa.style.cssText = "min-height:90px;font-family:var(--mono);font-size:.8rem";
+        var chipFoot = document.createElement("div");
+        chipFoot.className = "editorFoot";
+        chipFoot.style.marginTop = "8px";
+
+        function renderEtcChips(){
+          chipWrap.innerHTML = "";
+          (cfg.reportChips || []).forEach(function(txt){
+            var cb = document.createElement("button");
+            cb.type = "button"; cb.textContent = "+ " + txt.replace(/^-\s*/, "");
+            cb.addEventListener("click", function(){
+              ta.value = (ta.value ? ta.value.replace(/\s*$/,"") + "\n" : "") + txt;
+              ta.focus(); rptUpdate();
+            });
+            chipWrap.appendChild(cb);
+          });
+          var eb = document.createElement("button");
+          eb.type = "button"; eb.textContent = "✎ 문구 편집";
+          eb.style.borderStyle = "solid";
+          eb.addEventListener("click", function(){
+            if(chipEditBox.style.display === "block"){ chipEditBox.style.display = "none"; return; }
+            chipTa.value = (cfg.reportChips || []).join("\n");
+            chipEditBox.style.display = "block";
+          });
+          chipWrap.appendChild(eb);
+        }
+        var applyBtn = document.createElement("button");
+        applyBtn.type = "button"; applyBtn.className = "btn primary sm"; applyBtn.textContent = "적용";
+        applyBtn.addEventListener("click", function(){
+          var items = chipTa.value.split("\n").map(function(l){ return l.trim(); }).filter(Boolean);
+          if(!items.length){ toast("문구가 비어 있어요"); return; }
+          cfg.reportChips = items;
+          renderEtcChips(); autoSave();
+          toast("문구가 적용됐어요");
+        });
+        var closeBtn = document.createElement("button");
+        closeBtn.type = "button"; closeBtn.className = "btn ghost sm"; closeBtn.textContent = "닫기";
+        closeBtn.addEventListener("click", function(){ chipEditBox.style.display = "none"; });
+        chipFoot.appendChild(applyBtn); chipFoot.appendChild(closeBtn);
+        chipEditBox.appendChild(chipHint); chipEditBox.appendChild(chipTa); chipEditBox.appendChild(chipFoot);
+        renderEtcChips();
+        row.appendChild(chipWrap); row.appendChild(chipEditBox);
+      }
 
       /* 이슈 등록 항목: 지라 연동 도우미 */
       if(name.indexOf("이슈 등록") !== -1){
