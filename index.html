@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>버그 리포트 작성기 · QA</title>
+<title>QA Toolkit</title>
 <style>
   :root{
     --bg:#EEF1F5; --surface:#FFFFFF; --ink:#191D24; --muted:#6E7684;
@@ -49,7 +49,7 @@
     padding:14px 28px; display:flex; align-items:center; gap:12px;
     position:sticky; top:0; z-index:20;
   }
-  .bugdot{width:10px;height:10px;border-radius:50%;background:var(--bug);flex:none;box-shadow:0 0 0 4px var(--bug-soft)}
+  .logo{width:22px;height:22px;flex:none;display:block}
   header h1{font-size:1.05rem;font-weight:700;letter-spacing:-.01em}
   header .sub{font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-left:auto}
   .wrap{max-width:1240px;margin:0 auto;padding:24px 20px 80px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
@@ -104,6 +104,7 @@
   .btn.primary:hover{background:#0A6653}
   .btn.ghost{color:var(--muted)}
   .btn.sm{padding:4px 9px;font-size:.76rem;font-weight:500}
+  a.btn{display:inline-flex;align-items:center;text-decoration:none}
   .quickchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
   .quickchips button{border:1px dashed var(--line);background:#FBFCFD;border-radius:6px;padding:4px 9px;font-size:.76rem;cursor:pointer;color:var(--muted)}
   .quickchips button:hover{color:var(--accent);border-color:var(--accent)}
@@ -195,9 +196,15 @@
 </script>
 
 <header>
-  <span class="bugdot" aria-hidden="true"></span>
-  <h1>버그 리포트 작성기</h1>
-  <span class="sub">QA · JIRA BUG TEMPLATE</span>
+  <svg class="logo" viewBox="0 0 34 34" aria-hidden="true">
+    <path d="M13 8 L6 17 L13 26" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M21 8 L28 17 L21 26" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="17" cy="17" r="3" fill="var(--bug)"/>
+  </svg>
+  <h1>QA Toolkit</h1>
+  <span class="sub">QA · WORK TOOLKIT</span>
+  <a class="btn sm" id="btnJiraNew" href="https://ssgtoolchain.atlassian.net/secure/CreateIssue!default.jspa" target="_blank" rel="noopener" title="Jira 버그 등록 화면 열기">➕ 버그 등록</a>
+  <a class="btn sm" id="btnJira" href="https://ssgtoolchain.atlassian.net/issues/?filter=-2" target="_blank" rel="noopener" title="Jira에서 내게 할당된 이슈 열기">🔗 내 담당 이슈</a>
   <button class="btn sm" id="btnExport" type="button" title="내 설정이 담긴 파일 다운로드 (팀 공유·백업용)">📤 파일로 내보내기</button>
   <button class="btn sm" id="btnTheme" type="button">🌙 다크</button>
 </header>
