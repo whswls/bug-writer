@@ -1122,7 +1122,7 @@
   $("btnResEdit").addEventListener("click", function(){
     var box = $("resEditor");
     if(box.style.display === "block"){ box.style.display = "none"; return; }
-    $("resEdit").value = ((cfg.verifyResults && cfg.verifyResults.length) ? cfg.verifyResults : ["Done","FAIL"]).join("\n");
+    $("resEdit").value = ((cfg.verifyResults && cfg.verifyResults.length) ? cfg.verifyResults : ["Done","Fail","By Design"]).join("\n");
     box.style.display = "block";
   });
   $("resClose").addEventListener("click", function(){ $("resEditor").style.display = "none"; });
