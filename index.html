@@ -172,11 +172,11 @@
 <script id="cfg" type="application/json">
 {
   "sections": [
-    {"title":"상세설명","hint":"제목보다 조금 더 상세하게 작성해주세요","ph":"예: [통합앱][공통] 상품 UI가 노출되지 않는 현상 (Android, iOS 모두 발생)","tall":false,"url":false,"chips":false},
-    {"title":"사전조건","hint":"","ph":"예: 상품번호 1000012345678","tall":false,"url":false,"chips":false},
-    {"title":"재현경로","hint":"주소값 꼭 넣어주세요","ph":"1. 메인 > 모듈매장\n   https://...\n2. 유닛명 > ...\n3. 확인 내용","tall":true,"url":true,"chips":false},
+    {"title":"상세설명","hint":"제목을 그대로 복사하지 말고 조금 더 상세하게","ph":"예: [통합앱][공통] 상품 UI가 노출되지 않는 현상 (Android, iOS 모두 발생)","tall":false,"url":false,"chips":false},
+    {"title":"사전조건","hint":"상품번호 꼭 적어주기!","ph":"예: 상품번호 1000012345678","tall":false,"url":false,"chips":false},
+    {"title":"재현경로","hint":"주소값 꼭 넣기 · 마지막에 확인 내용 작성","ph":"1. 메인 > 모듈매장\n   https://...\n2. 유닛명 > ...\n3. 확인 내용","tall":true,"url":true,"chips":false},
     {"title":"기대결과","hint":"","ph":"예: 상품 > 혜택이 노출되어야 함","tall":false,"url":false,"chips":false},
-    {"title":"참고사항","hint":"다른 영향 범위도 확인해서 작성해주세요","ph":"비교 확인, 서버별 재현, 몰/유닛 영향 범위 등","tall":true,"url":false,"chips":true}
+    {"title":"참고사항","hint":"다른 영향 범위도 확인해서 작성","ph":"비교 확인, 서버별 재현, 몰/유닛 영향 범위 등","tall":true,"url":false,"chips":true}
   ],
   "chips": [
     {"label":"iOS/AOS 비교","text":"iOS, AOS 비교 확인: "},
@@ -204,6 +204,7 @@
   <h1>QA Toolkit</h1>
   <span class="sub">QA · WORK TOOLKIT</span>
   <a class="btn sm" id="btnJiraNew" href="https://ssgtoolchain.atlassian.net/secure/CreateIssue!default.jspa" target="_blank" rel="noopener" title="Jira 버그 등록 화면 열기">➕ 버그 등록</a>
+  <a class="btn sm" id="btnJiraToday" href="https://ssgtoolchain.atlassian.net/issues/?jql=reporter%20%3D%20currentUser%28%29%20AND%20created%20%3E%3D%20startOfDay%28%29%20ORDER%20BY%20created%20DESC" target="_blank" rel="noopener" title="오늘 내가 등록한 이슈 조회">📅 오늘 등록한 이슈</a>
   <a class="btn sm" id="btnJira" href="https://ssgtoolchain.atlassian.net/issues/?filter=-2" target="_blank" rel="noopener" title="Jira에서 내게 할당된 이슈 열기">🔗 내 담당 이슈</a>
   <button class="btn sm" id="btnExport" type="button" title="내 설정이 담긴 파일 다운로드 (팀 공유·백업용)">📤 파일로 내보내기</button>
   <button class="btn sm" id="btnTheme" type="button">🌙 다크</button>
@@ -1138,6 +1139,7 @@
   });
 
   /* ── 일일보고 ── */
+  var JIRA_TODAY_URL = $("btnJiraToday").getAttribute("href");
   var DEFAULT_REPORT_ITEMS = ["TC 작성","Test DATA 셋팅","TC 수행","이슈 등록","이슈 확인","Declined 이슈","기타"];
   function reportItems(){
     return (cfg.reportItems && cfg.reportItems.length) ? cfg.reportItems : DEFAULT_REPORT_ITEMS;
@@ -1174,21 +1176,74 @@
       var o = old[name];
       if(o){ cnt.value = o.count; tm.value = o.time; ta.value = o.note; }
       /* 이슈 등록·이슈 확인·Declined 이슈 등은 상세 내용에서 건수 자동 계산 */
+      var autoCount = null;
       if(/이슈/.test(name)){
         var nmHint = document.createElement("small");
         nmHint.textContent = "건수 자동 계산 (엔터·쉼표·따옴표로 구분) · 수기 입력도 가능";
         nm.appendChild(nmHint);
         cnt.placeholder = "자동";
-        ta.addEventListener("input", function(){
+        autoCount = function(){
           var n = ta.value.split(/[\n,"']+/)
             .map(function(x){ return x.trim(); })
             .filter(Boolean).length;
           cnt.value = n ? String(n) : "";
-        });
+        };
+        ta.addEventListener("input", autoCount);
       }
       [cnt, tm, ta].forEach(function(el){ el.addEventListener("input", rptUpdate); });
       head.appendChild(nm); head.appendChild(cnt); head.appendChild(tm);
       row.appendChild(head); row.appendChild(ta);
+
+      /* 이슈 등록 항목: 지라 연동 도우미 */
+      if(name.indexOf("이슈 등록") !== -1){
+        var tools = document.createElement("div");
+        tools.className = "editorFoot";
+        tools.style.marginTop = "8px";
+        var a = document.createElement("a");
+        a.href = JIRA_TODAY_URL; a.target = "_blank"; a.rel = "noopener";
+        a.className = "btn sm";
+        a.textContent = "📅 오늘 등록한 이슈";
+        a.title = "오늘 내가 등록한 이슈 조회";
+        var b = document.createElement("button");
+        b.type = "button"; b.className = "btn sm"; b.textContent = "🧹 이슈키만 정리";
+        b.addEventListener("click", function(){
+          /* Jira 목록 붙여넣기 구조:
+             각 블록의 첫 키 = 실제 이슈, "Epic icon"·"Parent" 다음 키 = 상위 이슈 */
+          var lines = ta.value.split("\n");
+          var picked = [], skipNext = false, prevParentHint = false;
+          lines.forEach(function(line){
+            var t = line.trim();
+            if(!t) return;
+            if(/^(epic icon|parent|상위 이슈|스토리 icon|task icon)$/i.test(t)){
+              prevParentHint = true; return;
+            }
+            var m = t.match(/[A-Z][A-Z0-9]+-\d+/g);
+            if(!m){ prevParentHint = false; return; }
+            if(prevParentHint){ prevParentHint = false; return; }
+            picked.push(m[0]);
+          });
+          /* 구조 파악 실패 시(한 줄로 붙여넣기 등) 전체 키에서 반복분 제외 */
+          if(!picked.length){
+            var all = ta.value.match(/[A-Z][A-Z0-9]+-\d+/g) || [];
+            var freq = {};
+            all.forEach(function(k){ freq[k] = (freq[k] || 0) + 1; });
+            all.forEach(function(k){ if(freq[k] === 1) picked.push(k); });
+          }
+          if(!picked.length){ toast("이슈키를 찾지 못했어요"); return; }
+          var total = (ta.value.match(/[A-Z][A-Z0-9]+-\d+/g) || []).length;
+          var seen = {}, uniq = [];
+          picked.forEach(function(k){ if(!seen[k]){ seen[k] = 1; uniq.push(k); } });
+          var dropped = total - uniq.length;
+          if(!uniq.length){ toast("남는 이슈키가 없어요 · 직접 확인해 주세요"); return; }
+          ta.value = uniq.join("\n");
+          if(autoCount) autoCount();
+          rptUpdate();
+          toast(uniq.length + "건 정리 완료" + (dropped > 0 ? " (상위 이슈 등 " + dropped + "개 제외)" : ""));
+        });
+        tools.appendChild(a); tools.appendChild(b);
+        row.appendChild(tools);
+      }
+
       wrap.appendChild(row);
     });
   }
