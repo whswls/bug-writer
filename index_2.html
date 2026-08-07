@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>버그 리포트 작성기 · QA</title>
+<style>
+  :root{
+    --bg:#EEF1F5; --surface:#FFFFFF; --ink:#191D24; --muted:#6E7684;
+    --line:#DCE1E9; --accent:#0E7C66; --accent-soft:#E4F2EE;
+    --bug:#D6453D; --bug-soft:#FCEBEA; --chip:#14181F; --chip-ink:#F5F7FA;
+    --mono:"SF Mono","Cascadia Code",Consolas,"Nanum Gothic Coding",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{font-size:15px}
+  body{
+    font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.55;
+  }
+  body.dark{
+    --bg:#0F1216; --surface:#191E25; --ink:#F2F4F8; --muted:#A8B1BF;
+    --line:#333B46; --accent:#4AC7A0; --accent-soft:#12352A;
+    --bug:#FF6B62; --bug-soft:#42211E; --chip:#F2F4F8; --chip-ink:#12161C;
+  }
+  body.dark header{background:#161B22;border-color:#2A313B}
+  body.dark input[type=text],body.dark select,body.dark textarea{background:#11151B;color:var(--ink);border-color:#3A434F}
+  body.dark input::placeholder,body.dark textarea::placeholder{color:#6E7887}
+  body.dark input:focus,body.dark select:focus,body.dark textarea:focus{background:#0D1116}
+  body.dark select option{background:#191E25;color:var(--ink)}
+  body.dark .seg button{background:#11151B;color:#D8DDE5;border-color:#3A434F}
+  body.dark .seg button.on{background:var(--chip);color:var(--chip-ink);border-color:var(--chip)}
+  body.dark .quickchips button{background:#11151B;color:#BAC3D0;border-color:#3A434F}
+  body.dark .quickchips button:hover{color:var(--accent);border-color:var(--accent)}
+  body.dark .secRow .mv{background:#11151B;color:#BAC3D0;border-color:#3A434F}
+  body.dark .ticket-head,body.dark .copybar{background:#151A21}
+  body.dark .btn{background:#20262E;color:var(--ink);border-color:#3A434F}
+  body.dark .btn:hover{border-color:#8B95A5}
+  body.dark .btn.primary{background:var(--accent);border-color:var(--accent);color:#0B1611}
+  body.dark .btn.primary:hover{background:#3FB591}
+  body.dark .btn.ghost{color:var(--muted)}
+  body.dark .note.warn{color:#FFB4AE}
+  body.dark .note.info{color:#8FE3C6}
+  body.dark .hint{color:#9AA5B4}
+  body.dark .desc{color:#E6EAF0}
+  body.dark .attach-reminder{color:#A8B1BF}
+  body.dark .placeholder{color:#5B6473}
+  header{
+    background:var(--surface); border-bottom:1px solid var(--line);
+    padding:14px 28px; display:flex; align-items:center; gap:12px;
+    position:sticky; top:0; z-index:20;
+  }
+  .bugdot{width:10px;height:10px;border-radius:50%;background:var(--bug);flex:none;box-shadow:0 0 0 4px var(--bug-soft)}
+  header h1{font-size:1.05rem;font-weight:700;letter-spacing:-.01em}
+  header .sub{font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-left:auto}
+  .wrap{max-width:1240px;margin:0 auto;padding:24px 20px 80px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+  @media(max-width:960px){.wrap{grid-template-columns:1fr}}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-bottom:16px}
+  .card h2{font-size:.95rem;font-family:var(--mono);letter-spacing:.04em;color:var(--muted);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .card h2::after{content:"";flex:1;height:1px;background:var(--line)}
+  .card h2 .h2btn{
+    font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    font-size:.8rem;font-weight:700;letter-spacing:0;text-transform:none;
+    color:var(--accent);background:var(--accent-soft);
+    border:1px solid transparent;border-radius:999px;padding:4px 12px;cursor:pointer;
+  }
+  .card h2 .h2btn:hover{border-color:var(--accent)}
+
+  label.fl{display:block;font-size:.8rem;font-weight:600;color:var(--ink);margin:12px 0 5px}
+  label.fl:first-of-type{margin-top:0}
+  label.fl small{font-weight:400;color:var(--muted);margin-left:6px}
+  input[type=text],select,textarea{
+    width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;
+    font:inherit;font-size:.88rem;background:#FBFCFD;color:var(--ink);
+  }
+  textarea{resize:vertical;min-height:74px}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px;background:#fff}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:520px){.row{grid-template-columns:1fr}}
+
+  .seg{display:flex;flex-wrap:wrap;gap:6px}
+  .seg button{
+    border:1px solid var(--line);background:#FBFCFD;border-radius:999px;
+    padding:5px 13px;font:inherit;font-size:.82rem;cursor:pointer;color:var(--ink);
+  }
+  .seg button.on{background:var(--chip);color:var(--chip-ink);border-color:var(--chip);font-weight:600}
+  .checks{display:flex;flex-wrap:wrap;gap:4px 14px}
+  .checks label{display:inline-flex;align-items:center;gap:6px;font-size:.85rem;cursor:pointer;padding:3px 0}
+  .checks input{accent-color:var(--accent);width:15px;height:15px}
+
+  .hint{font-size:.76rem;color:var(--muted);margin-top:5px}
+  .note{border-radius:8px;padding:9px 12px;font-size:.8rem;margin-top:9px}
+  .note.warn{background:var(--bug-soft);color:#8C2620}
+  .note.info{background:var(--accent-soft);color:#0A5748}
+
+  .urlhelper{display:flex;gap:8px;margin-top:6px}
+  .urlhelper input{flex:1}
+  .btn{
+    border:1px solid var(--line);background:var(--surface);border-radius:8px;
+    padding:8px 14px;font:inherit;font-size:.83rem;font-weight:600;cursor:pointer;white-space:nowrap;
+  }
+  .btn:hover{border-color:var(--ink)}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.primary:hover{background:#0A6653}
+  .btn.ghost{color:var(--muted)}
+  .btn.sm{padding:4px 9px;font-size:.76rem;font-weight:500}
+  .quickchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+  .quickchips button{border:1px dashed var(--line);background:#FBFCFD;border-radius:6px;padding:4px 9px;font-size:.76rem;cursor:pointer;color:var(--muted)}
+  .quickchips button:hover{color:var(--accent);border-color:var(--accent)}
+
+  /* 섹션 편집기 */
+  #editorCard{display:none;border-color:var(--accent)}
+  #editorCard.open{display:block}
+  .secRow{display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+  .secRow input[type=text]{flex:1;min-width:110px}
+  .secRow input.hintIn{flex:1.4;min-width:140px}
+  .secRow .opt{display:inline-flex;align-items:center;gap:4px;font-size:.74rem;color:var(--muted);white-space:nowrap;cursor:pointer}
+  .secRow .opt input{accent-color:var(--accent)}
+  .secRow .mv{border:1px solid var(--line);background:#FBFCFD;border-radius:6px;width:26px;height:30px;cursor:pointer;color:var(--muted)}
+  .secRow .mv:hover{color:var(--ink)}
+  .secRow .del{border:none;background:none;color:var(--bug);cursor:pointer;font-size:1rem;padding:0 4px}
+  .editorFoot{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+
+  /* 미리보기 */
+  .preview{position:sticky;top:70px}
+  @media(max-width:960px){.preview{position:static}}
+  .ticket{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .ticket-head{padding:16px 20px;border-bottom:1px solid var(--line);background:#FAFBFC}
+  .ticket-title{font-size:1rem;font-weight:700;letter-spacing:-.01em;word-break:break-all}
+  .ticket-title .tk{
+    font-family:var(--mono);font-size:.78rem;background:var(--chip);color:var(--chip-ink);
+    border-radius:5px;padding:2px 7px;margin-right:4px;display:inline-block;vertical-align:2px;
+  }
+  .ticket-title .scope{color:var(--muted);font-weight:500;font-size:.88rem}
+  .fieldgrid{display:grid;grid-template-columns:96px 1fr;gap:4px 12px;padding:14px 20px;border-bottom:1px solid var(--line);font-size:.82rem}
+  .fieldgrid dt{color:var(--muted);font-family:var(--mono);font-size:.72rem;padding-top:2px}
+  .fieldgrid dd{word-break:break-all}
+  .desc{padding:16px 20px;font-size:.85rem;white-space:pre-wrap;word-break:break-all;font-family:var(--mono);line-height:1.7;max-height:420px;overflow:auto}
+  .desc .sect{color:var(--accent);font-weight:700}
+  .copybar{display:flex;gap:8px;flex-wrap:wrap;padding:14px 20px;border-top:1px solid var(--line);background:#FAFBFC}
+  .attach-reminder{margin-top:14px;background:var(--surface);border:1px dashed var(--line);border-radius:12px;padding:14px 18px;font-size:.8rem;color:var(--muted)}
+  .attach-reminder strong{color:var(--ink);font-size:.78rem;font-family:var(--mono);letter-spacing:.06em;display:block;margin-bottom:6px}
+  .attach-reminder li{margin-left:18px;margin-top:2px}
+
+  /* 일일보고 */
+  .rItem{margin-bottom:12px}
+  .rHead{display:flex;gap:8px;align-items:center;margin-bottom:5px}
+  .rHead .rname{flex:1;font-size:.85rem;font-weight:600}
+  .rHead .rname small{font-weight:400;color:var(--muted);font-size:.72rem;margin-left:6px}
+  .rHead input.rCount{width:70px}
+  .rHead input.rTime{width:110px}
+  .rItem textarea{min-height:50px;font-size:.84rem}
+  .rtable{width:100%;border-collapse:collapse;font-size:.82rem}
+  .rtable th{text-align:left;font-family:var(--mono);font-size:.7rem;letter-spacing:.06em;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--line)}
+  .rtable td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top;word-break:break-all}
+  .rtable td.cell{white-space:pre-wrap;font-family:var(--mono);font-size:.78rem}
+
+  #toast{
+    position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--chip);color:var(--chip-ink);padding:10px 20px;border-radius:999px;
+    font-size:.84rem;opacity:0;pointer-events:none;transition:all .22s ease;z-index:50;
+  }
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion:reduce){#toast{transition:none}}
+  .placeholder{color:#B4BAC4}
+</style>
+</head>
+<body>
+
+<!-- ▼ 기본 설정. 앱에서 편집 후 "파일로 내보내기"를 누르면 이 부분이 교체된 파일이 다운로드됩니다. -->
+<script id="cfg" type="application/json">
+{
+  "sections": [
+    {"title":"상세설명","hint":"제목을 그대로 복사하지 말고 조금 더 상세하게","ph":"예: [통합앱][공통] 상품 UI가 노출되지 않는 현상 (Android, iOS 모두 발생)","tall":false,"url":false,"chips":false},
+    {"title":"사전조건","hint":"상품번호 꼭 적어주기!","ph":"예: 상품번호 1000012345678","tall":false,"url":false,"chips":false},
+    {"title":"재현경로","hint":"주소값 꼭 넣기 · 마지막에 확인 내용 작성","ph":"1. 메인 > 모듈매장\n   https://...\n2. 유닛명 > ...\n3. 확인 내용","tall":true,"url":true,"chips":false},
+    {"title":"기대결과","hint":"","ph":"예: 상품 > 혜택이 노출되어야 함","tall":false,"url":false,"chips":false},
+    {"title":"참고사항","hint":"다른 영향 범위도 확인해서 작성","ph":"비교 확인, 서버별 재현, 몰/유닛 영향 범위 등","tall":true,"url":false,"chips":true}
+  ],
+  "chips": [
+    {"label":"iOS/AOS 비교","text":"iOS, AOS 비교 확인: "},
+    {"label":"Chrome/Edge 비교","text":"Chrome, Edge 비교 확인: "},
+    {"label":"서버별 재현","text":"각 서버 재현 확인 (QA / STG / Real): "},
+    {"label":"몰별 확인","text":"몰별 확인: "},
+    {"label":"발생 유닛 범위","text":"발생 유닛 범위: "},
+    {"label":"첨부 참조","text":"첨부 파일 참조"}
+  ],
+  "devices": [],
+  "verifyVer": {"aos": "", "ios": "", "app": ""},
+  "theme": "light",
+  "verifyResults": ["Done","FAIL"],
+  "verifyChips": ["하여 Done 처리","하여 Reopen 처리"],
+  "reportItems": ["TC 작성","Test DATA 셋팅","TC 수행","이슈 등록","이슈 확인","Declined 이슈","기타"]
+}
+</script>
+
+<header>
+  <span class="bugdot" aria-hidden="true"></span>
+  <h1>버그 리포트 작성기</h1>
+  <span class="sub">QA · JIRA BUG TEMPLATE</span>
+  <button class="btn sm" id="btnExport" type="button" title="내 설정이 담긴 파일 다운로드 (팀 공유·백업용)">📤 파일로 내보내기</button>
+  <button class="btn sm" id="btnTheme" type="button">🌙 다크</button>
+</header>
+
+<div class="wrap">
+
+  <!-- ─────────── 입력 폼 ─────────── -->
+  <div>
+    <div class="seg" id="modeSeg" style="margin-bottom:14px" role="group" aria-label="작성 모드"></div>
+
+    <div id="bugPane">
+    <div class="card">
+      <h2>제목</h2>
+
+      <label class="fl">구분</label>
+      <div class="seg" id="segCat" role="group" aria-label="구분"></div>
+
+      <label class="fl">플랫폼 / 브라우저</label>
+      <div class="seg" id="segPlat" role="group" aria-label="플랫폼"></div>
+
+      <label class="fl">발생 범위</label>
+      <select id="scope"></select>
+      <input type="text" id="scopeCustom" placeholder="직접 입력 (예: Android, iOS 모두 발생)" style="display:none;margin-top:6px">
+      <div class="note warn" id="noteBoth" style="display:none">⚠ Android · iOS 둘 다 발생하면 <b>각각 별도 이슈</b>로 등록해야 해요.</div>
+      <div class="note info" id="noteServer" style="display:none">앱·MW 모두 발생 → 서버 이슈일 수 있어요. 검색 / 상품상세 / 공통유닛 쪽을 함께 확인하세요.</div>
+
+      <label class="fl">내용 <small>모듈유닛 이슈면 유닛 이름을 함께 적어주세요</small></label>
+      <input type="text" id="title" placeholder="예: 카테고리탭 상품 이미지 잘림">
+    </div>
+
+    <div class="card">
+      <h2>발생 기기</h2>
+      <label class="fl">기기 선택 <small>특정 기기에서만 발생할 때 선택 · 칩을 클릭하면 제거</small></label>
+      <div class="urlhelper" style="margin-top:0">
+        <select id="deviceSel" style="flex:1"></select>
+        <button class="btn" id="btnAddDevice" type="button">추가</button>
+      </div>
+      <div class="quickchips" id="deviceChips"></div>
+      <button class="btn sm" id="btnDevEdit" type="button" style="margin-top:8px">✎ 기기 목록 편집</button>
+      <div id="devEditor" style="display:none;margin-top:10px;border:1px solid var(--accent);border-radius:10px;padding:12px">
+        <div class="hint" style="margin:0 0 8px">소유자가 바뀌거나 기기·OS가 변경되면 여기서 고치세요. <b>적용</b>하면 자동 저장돼서 다음에 열 때도 유지돼요. 팀 공유·백업은 상단의 <b>파일로 내보내기</b>로 하세요.</div>
+        <div id="devRows"></div>
+        <div class="editorFoot" style="margin-top:8px">
+          <button class="btn sm" id="btnDevAdd" type="button">＋ 기기 추가</button>
+          <button class="btn primary sm" id="btnDevApply" type="button">적용</button>
+          <button class="btn ghost sm" id="btnDevClose" type="button">닫기</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Description <button class="h2btn" id="btnEditor" type="button">⚙ 섹션 설정</button></h2>
+      <div id="descArea"></div>
+    </div>
+
+    <!-- ─── 섹션 편집기 ─── -->
+    <div class="card" id="editorCard">
+      <h2>섹션 설정</h2>
+      <div class="hint" style="margin-bottom:10px">섹션 이름·안내문구를 바꾸거나 추가/삭제/순서 변경할 수 있어요. <b>적용</b>하면 이 브라우저에 자동 저장돼서 다음에 열 때도 유지돼요. 팀 공유·백업용 파일이 필요하면 상단의 <b>파일로 내보내기</b>를 쓰세요.</div>
+      <div id="secList"></div>
+      <button class="btn sm" id="btnAddSec" type="button">＋ 섹션 추가</button>
+
+      <label class="fl" style="margin-top:16px">빠른 문구 버튼 <small>한 줄에 하나씩 · "라벨 | 삽입할 문구"</small></label>
+      <textarea id="chipEdit" style="min-height:100px;font-family:var(--mono);font-size:.8rem"></textarea>
+
+      <div class="editorFoot">
+        <button class="btn primary" id="btnApply" type="button">적용</button>
+        <button class="btn ghost" id="btnDefault" type="button">기본값 복원</button>
+        <button class="btn ghost" id="btnCloseEditor" type="button">닫기</button>
+      </div>
+    </div>
+
+    <button class="btn ghost" id="btnReset" type="button">↺ 작성 내용 초기화</button>
+    </div><!-- /bugPane -->
+
+    <div id="verifyPane" style="display:none">
+      <div class="card">
+        <h2>이슈 확인</h2>
+
+        <label class="fl">구분</label>
+        <div class="seg" id="vCatSeg" role="group" aria-label="구분"></div>
+
+        <div id="vVerMw" style="margin-top:16px">
+          <div class="row">
+            <div>
+              <label class="fl">Android 버전</label>
+              <input type="text" id="vAos" placeholder="예: 14">
+            </div>
+            <div>
+              <label class="fl">iOS 버전</label>
+              <input type="text" id="vIos" placeholder="예: 26.0">
+            </div>
+          </div>
+        </div>
+        <div id="vVerOne" style="display:none;margin-top:16px">
+          <label class="fl">Ver</label>
+          <input type="text" id="vVer" placeholder="예: Android 4.2.0(1042003)">
+        </div>
+        <button class="btn sm" id="vSaveVer" type="button" style="margin-top:8px">💾 이 버전을 기본값으로 저장</button>
+        <div class="hint">저장하면 다음에 열 때 버전이 자동으로 채워져요. 버전이 바뀌면 칸을 고친 뒤 다시 저장하면 돼요.</div>
+
+        <label class="fl">서버 <small>클릭해서 여러 개 선택 가능</small></label>
+        <div class="seg" id="vServerSeg" role="group" aria-label="서버"></div>
+
+        <label class="fl">결과</label>
+        <div class="seg" id="vResultSeg" role="group" aria-label="결과"></div>
+        <button class="btn sm" id="btnResEdit" type="button" style="margin-top:6px">✎ 결과 옵션 편집</button>
+        <div id="resEditor" style="display:none;margin-top:8px;border:1px solid var(--accent);border-radius:10px;padding:12px">
+          <div class="hint" style="margin:0 0 8px">결과 옵션을 한 줄에 하나씩 적으세요 (예: Done, FAIL, Pass, 보류). <b>적용</b>하면 자동 저장돼서 다음에도 유지돼요.</div>
+          <textarea id="resEdit" style="min-height:80px;font-family:var(--mono);font-size:.8rem"></textarea>
+          <div class="editorFoot" style="margin-top:8px">
+            <button class="btn primary sm" id="resApply" type="button">적용</button>
+            <button class="btn ghost sm" id="resClose" type="button">닫기</button>
+          </div>
+        </div>
+
+        <label class="fl">확인 내용 <small>마지막에 Done / Reopen 처리 문구로 마무리</small></label>
+        <textarea id="vNote" style="min-height:110px" placeholder="예: OO 이벤트 확인 시 정상 동작&#10;해당 이벤트(이벤트 ID : ...) 확인 내용 작성"></textarea>
+        <div class="quickchips" id="vChipWrap"></div>
+        <button class="btn sm" id="btnVChipEdit" type="button" style="margin-top:6px">✎ 문구 편집</button>
+        <div id="vChipEditor" style="display:none;margin-top:8px;border:1px solid var(--accent);border-radius:10px;padding:12px">
+          <div class="hint" style="margin:0 0 8px">확인 내용 끝에 붙일 문구를 한 줄에 하나씩 적으세요. <b>적용</b>하면 자동 저장돼서 다음에도 유지돼요.</div>
+          <textarea id="vChipEdit" style="min-height:80px;font-family:var(--mono);font-size:.8rem"></textarea>
+          <div class="editorFoot" style="margin-top:8px">
+            <button class="btn primary sm" id="vcApply" type="button">적용</button>
+            <button class="btn ghost sm" id="vcClose" type="button">닫기</button>
+          </div>
+        </div>
+
+        <div class="editorFoot">
+          <button class="btn sm" id="vAddBlock" type="button">＋ 확인 블록 추가</button>
+          <button class="btn ghost sm" id="vClear" type="button">입력 지우기</button>
+        </div>
+        <div class="hint">MW·통합앱 등 여러 환경에서 확인했으면, 한 환경 입력 후 블록 추가 → 다음 환경을 이어서 작성하세요.</div>
+        <div class="quickchips" id="vBlockChips"></div>
+      </div>
+    </div>
+
+    <div id="reportPane" style="display:none">
+      <div class="card">
+        <h2>일일보고 <button class="h2btn" id="btnRptEdit" type="button">✎ 항목 편집</button></h2>
+        <div id="reportRows"></div>
+        <div class="editorFoot">
+          <button class="btn ghost sm" id="rptClear" type="button">↺ 입력 지우기</button>
+        </div>
+        <div id="rptEditor" style="display:none;margin-top:10px;border:1px solid var(--accent);border-radius:10px;padding:12px">
+          <div class="hint" style="margin:0 0 8px">보고 항목을 한 줄에 하나씩 적으세요. <b>적용</b>하면 자동 저장돼서 다음에도 유지돼요.</div>
+          <textarea id="rptItemEdit" style="min-height:120px;font-family:var(--mono);font-size:.8rem"></textarea>
+          <div class="editorFoot" style="margin-top:8px">
+            <button class="btn primary sm" id="rptApply" type="button">적용</button>
+            <button class="btn ghost sm" id="rptClose" type="button">닫기</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────── 미리보기 ─────────── -->
+  <div class="preview">
+    <div id="bugView">
+    <div class="ticket">
+      <div class="ticket-head">
+        <div class="ticket-title" id="pvTitle"></div>
+      </div>
+      <div class="desc" id="pvDesc"></div>
+      <div class="copybar">
+        <button class="btn primary" id="cpTitle" type="button">제목 복사</button>
+        <button class="btn primary" id="cpDesc" type="button">Description 복사</button>
+        <button class="btn" id="cpAll" type="button">전체 복사</button>
+      </div>
+    </div>
+
+    <div class="attach-reminder">
+      <strong>ATTACHMENT CHECK</strong>
+      <ul>
+        <li>이미지는 그림판 등으로 <b>해당 영역 표시</b>해서 첨부</li>
+        <li>동영상은 <b>iOS · Android 둘 다</b> 올려서 비교 가능하게</li>
+      </ul>
+    </div>
+    </div><!-- /bugView -->
+
+    <div id="verifyView" style="display:none">
+      <div class="ticket">
+        <div class="ticket-head">
+          <div class="ticket-title">이슈 확인 코멘트</div>
+        </div>
+        <div class="desc" id="vPreview"></div>
+        <div class="copybar">
+          <button class="btn primary" id="vCopy" type="button">확인 내용 복사</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="reportView" style="display:none">
+      <div class="ticket">
+        <div class="ticket-head">
+          <div class="ticket-title">일일보고 미리보기</div>
+        </div>
+        <div style="padding:12px 16px;overflow:auto">
+          <table class="rtable" id="rptTable"></table>
+        </div>
+        <div class="copybar">
+          <button class="btn primary" id="rptCopy" type="button">보고 내용 복사</button>
+        </div>
+      </div>
+      <div class="attach-reminder">
+        <strong>PASTE TIP</strong>
+        <ul>
+          <li>복사한 내용을 <b>엑셀/스프레드시트</b>에 붙여넣으면 항목 · 건수 · 내용 칸으로 나뉘어 들어가요.</li>
+          <li>건수를 비워두면 자동으로 <b>0</b>으로 채워져요.</li>
+          <li>시간에 숫자만 적으면 <b>H</b>가 자동으로 붙어요. (6.5 → 6.5H)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" role="status"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var $ = function(id){ return document.getElementById(id); };
+
+  /* ── 설정 로드 (브라우저 자동 저장분 우선, 없으면 파일 기본값) ── */
+  var DEFAULT_CFG = JSON.parse($("cfg").textContent);
+  var CFG_KEY = "bugwriter-cfg-public-v1";
+  var cfg = (function(){
+    try{
+      var raw = localStorage.getItem(CFG_KEY);
+      if(raw){
+        var stored = JSON.parse(raw);
+        if(stored && stored.sections && stored.sections.length){
+          return Object.assign(JSON.parse(JSON.stringify(DEFAULT_CFG)), stored);
+        }
+      }
+    }catch(e){}
+    return JSON.parse(JSON.stringify(DEFAULT_CFG));
+  })();
+  function autoSave(){
+    try{ localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }catch(e){}
+  }
+
+  /* ── 제목 데이터 ── */
+  var MAP = {
+    "통합앱": { plats:["Android","iOS","공통"],
+      scopes:{ "Android":["Android만 발생","Android, iOS 모두 발생"],
+               "iOS":["iOS만 발생","Android, iOS 모두 발생"],
+               "공통":["MW/APP 모두 발생"] } },
+    "MW":    { plats:["Chrome","Safari","공통"],
+      scopes:{ "Chrome":["Chrome만 발생"], "Safari":["Safari만 발생"],
+               "공통":["MW만 발생","MW/APP 모두 발생"] } },
+    "PC":    { plats:["Chrome","edge","공통"],
+      scopes:{ "Chrome":["Chrome만 발생"], "edge":["edge만 발생"], "공통":["PC만 발생"] } },
+    "PC/MW": { plats:["공통"], scopes:{ "공통":["PC, MW 모두 발생"] } }
+  };
+  var state = { cat:"통합앱", plat:"Android" };
+
+  /* ── 세그먼트 ── */
+  function renderSeg(el, items, current, onPick){
+    el.innerHTML = "";
+    items.forEach(function(it){
+      var b = document.createElement("button");
+      b.type = "button"; b.textContent = it;
+      if(it === current) b.classList.add("on");
+      b.addEventListener("click", function(){ onPick(it); });
+      el.appendChild(b);
+    });
+  }
+  function renderCat(){
+    renderSeg($("segCat"), Object.keys(MAP), state.cat, function(v){
+      state.cat = v; state.plat = MAP[v].plats[0];
+      renderCat(); renderPlat(); renderScope(); update();
+    });
+  }
+  function renderPlat(){
+    renderSeg($("segPlat"), MAP[state.cat].plats, state.plat, function(v){
+      state.plat = v; renderPlat(); renderScope(); update();
+    });
+  }
+  function renderScope(){
+    var sel = $("scope");
+    var opts = (MAP[state.cat].scopes[state.plat] || []).slice();
+    sel.innerHTML = "";
+    opts.concat(["직접 입력"]).forEach(function(o){
+      var op = document.createElement("option");
+      op.value = o; op.textContent = o; sel.appendChild(op);
+    });
+  }
+
+  /* ── 발생 기기 ── */
+  var chosenDevices = [];
+  function renderDeviceSel(){
+    var sel = $("deviceSel");
+    sel.innerHTML = "";
+    var ph = document.createElement("option");
+    ph.value = ""; ph.textContent = "기기 선택";
+    sel.appendChild(ph);
+    var byOwner = {};
+    (cfg.devices || []).forEach(function(d){
+      var o = (d.owner || "").trim() || "기타";
+      (byOwner[o] = byOwner[o] || []).push(d);
+    });
+    Object.keys(byOwner).forEach(function(o){
+      var og = document.createElement("optgroup");
+      og.label = o;
+      byOwner[o].forEach(function(d){
+        var op = document.createElement("option");
+        op.value = JSON.stringify(d);
+        op.textContent = d.device + " · " + d.os;
+        og.appendChild(op);
+      });
+      sel.appendChild(og);
+    });
+  }
+  function renderDeviceChips(){
+    var wrap = $("deviceChips");
+    wrap.innerHTML = "";
+    chosenDevices.forEach(function(d, i){
+      var b = document.createElement("button");
+      b.type = "button";
+      b.textContent = d.owner + " · " + d.device + " (" + d.os + ") ✕";
+      b.title = "클릭하면 제거";
+      b.addEventListener("click", function(){
+        chosenDevices.splice(i, 1); renderDeviceChips(); update();
+      });
+      wrap.appendChild(b);
+    });
+  }
+  function devicesText(){
+    return chosenDevices.map(function(d){
+      return d.device + " / " + d.os.replace(/^(iOS|Android)\s*/, "");
+    }).join(", ");
+  }
+
+  /* ── Description 영역 (설정 기반 동적 렌더) ── */
+  function secValues(){
+    var vals = {};
+    document.querySelectorAll("#descArea textarea.dsec").forEach(function(t){
+      vals[t.dataset.title] = t.value;
+    });
+    return vals;
+  }
+  function renderDesc(keepValues){
+    var old = keepValues ? secValues() : {};
+    var area = $("descArea");
+    area.innerHTML = "";
+    cfg.sections.forEach(function(s, idx){
+      var lb = document.createElement("label");
+      lb.className = "fl";
+      lb.textContent = "[" + s.title + "] ";
+      if(s.hint){
+        var sm = document.createElement("small");
+        sm.textContent = s.hint;
+        lb.appendChild(sm);
+      }
+      area.appendChild(lb);
+
+      var ta = document.createElement("textarea");
+      ta.className = "dsec";
+      ta.dataset.title = s.title;
+      ta.dataset.idx = idx;
+      if(s.ph) ta.placeholder = s.ph;
+      if(s.tall) ta.style.minHeight = "110px";
+      if(old[s.title] !== undefined) ta.value = old[s.title];
+      ta.addEventListener("input", update);
+      area.appendChild(ta);
+
+      if(s.url){
+        var uh = document.createElement("div");
+        uh.className = "urlhelper";
+        var ui = document.createElement("input");
+        ui.type = "text"; ui.placeholder = "URL 붙여넣기 → 디버그 파라미터 자동 추가";
+        var ub = document.createElement("button");
+        ub.type = "button"; ub.className = "btn"; ub.textContent = "디버그모드 붙여서 추가";
+        ub.addEventListener("click", function(){
+          var v = addDebugParams(ui.value);
+          if(!v){ toast("URL을 먼저 입력해 주세요"); return; }
+          ta.value = (ta.value ? ta.value.replace(/\s*$/,"") + "\n" : "") + "   " + v;
+          ui.value = ""; update(); toast("디버그모드 URL 추가됨");
+        });
+        uh.appendChild(ui); uh.appendChild(ub);
+        area.appendChild(uh);
+        var h = document.createElement("div");
+        h.className = "hint";
+        h.textContent = "cacheCmd=pass&areainfo_debug=Y 가 자동으로 붙어서 추가돼요.";
+        area.appendChild(h);
+      }
+
+      if(s.chips){
+        var qc = document.createElement("div");
+        qc.className = "quickchips";
+        cfg.chips.forEach(function(ch){
+          var b = document.createElement("button");
+          b.type = "button"; b.textContent = "+ " + ch.label;
+          b.addEventListener("click", function(){
+            ta.value = (ta.value ? ta.value.replace(/\s*$/,"") + "\n" : "") + ch.text;
+            ta.focus(); update();
+          });
+          qc.appendChild(b);
+        });
+        area.appendChild(qc);
+      }
+    });
+  }
+
+  /* ── URL 디버그 ── */
+  function addDebugParams(u){
+    u = u.trim();
+    if(!u) return "";
+    var hasQ = u.indexOf("?") !== -1;
+    if(u.indexOf("cacheCmd=") === -1){ u += (hasQ ? "&" : "?") + "cacheCmd=pass"; hasQ = true; }
+    if(u.indexOf("areainfo_debug=") === -1){ u += (hasQ ? "&" : "?") + "areainfo_debug=Y"; }
+    return u;
+  }
+
+  /* ── 텍스트 조합 ── */
+  function scopeText(){
+    var v = $("scope").value;
+    if(v === "직접 입력") return $("scopeCustom").value.trim();
+    return v;
+  }
+  function fullTitle(){
+    var c = $("title").value.trim() || "내용 작성";
+    var s = scopeText();
+    return "[" + state.cat + "][" + state.plat + "] " + c + (s ? " (" + s + ")" : "");
+  }
+  function descText(){
+    var vals = secValues();
+    var dev = devicesText();
+    /* 발생기기는 "참고사항" 섹션에 자동 추가 (없으면 마지막 섹션) */
+    var refIdx = -1;
+    cfg.sections.forEach(function(s, i){ if(s.title === "참고사항") refIdx = i; });
+    if(refIdx === -1) refIdx = cfg.sections.length - 1;
+    return cfg.sections.map(function(s, i){
+      var v = (vals[s.title] || "").trim();
+      if(i === refIdx && dev){
+        v = (v ? v + "\n" : "") + "발생기기: " + dev;
+      }
+      return "[" + s.title + "]\n" + (v || "-");
+    }).join("\n\n");
+  }
+  /* ── 미리보기 ── */
+  function esc(s){
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+  function update(){
+    var c = $("title").value.trim();
+    var s = scopeText();
+    $("pvTitle").innerHTML =
+      '<span class="tk">' + esc(state.cat) + '</span>' +
+      '<span class="tk">' + esc(state.plat) + '</span> ' +
+      (c ? esc(c) : '<span class="placeholder">내용 작성</span>') +
+      (s ? ' <span class="scope">(' + esc(s) + ')</span>' : '');
+
+    var both = s.indexOf("Android, iOS 모두") !== -1;
+    var mwapp = s.indexOf("MW/APP 모두") !== -1 || s.indexOf("PC, MW 모두") !== -1;
+    $("noteBoth").style.display = both ? "block" : "none";
+    $("noteServer").style.display = mwapp ? "block" : "none";
+    $("scopeCustom").style.display = $("scope").value === "직접 입력" ? "block" : "none";
+
+    $("pvDesc").innerHTML = esc(descText())
+      .replace(/^(\[[^\]\n]{1,30}\])$/gm, '<span class="sect">$1</span>');
+  }
+
+  /* ── 복사 ── */
+  function copy(text, msg){
+    function done(){ toast(msg); }
+    function fallback(){
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); done(); }
+      catch(e){ toast("복사 실패 — 직접 선택해서 복사해 주세요"); }
+      document.body.removeChild(ta);
+    }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done, fallback);
+    } else fallback();
+  }
+  $("cpTitle").addEventListener("click", function(){ copy(fullTitle(), "제목 복사 완료"); });
+  $("cpDesc").addEventListener("click", function(){ copy(descText(), "Description 복사 완료"); });
+  $("cpAll").addEventListener("click", function(){
+    copy(fullTitle() + "\n\n" + descText(), "전체 복사 완료");
+  });
+
+  $("btnAddDevice").addEventListener("click", function(){
+    var v = $("deviceSel").value;
+    if(!v){ toast("기기를 먼저 선택해 주세요"); return; }
+    var d = JSON.parse(v);
+    var dup = chosenDevices.some(function(x){
+      return x.owner === d.owner && x.device === d.device;
+    });
+    if(dup){ toast("이미 추가된 기기예요"); return; }
+    chosenDevices.push(d);
+    $("deviceSel").value = "";
+    renderDeviceChips(); update();
+  });
+
+  /* ── 기기 목록 편집기 ── */
+  var devEditCfg = null;
+  function renderDevRows(){
+    var list = $("devRows");
+    list.innerHTML = "";
+    function txt(val, ph, onIn){
+      var el = document.createElement("input");
+      el.type = "text"; el.value = val || ""; el.placeholder = ph;
+      el.setAttribute("aria-label", ph);
+      el.addEventListener("input", function(){ onIn(el.value); });
+      return el;
+    }
+    devEditCfg.forEach(function(d, i){
+      var row = document.createElement("div");
+      row.className = "secRow";
+      var owner = txt(d.owner, "이름", function(v){ d.owner = v; });
+      owner.style.maxWidth = "90px";
+      var device = txt(d.device, "기기 (예: Galaxy S22)", function(v){ d.device = v; });
+      var os = txt(d.os, "OS (예: Android 15)", function(v){ d.os = v; });
+      os.style.maxWidth = "140px";
+      var del = document.createElement("button");
+      del.type = "button"; del.className = "del"; del.textContent = "✕";
+      del.title = "기기 삭제";
+      del.addEventListener("click", function(){
+        devEditCfg.splice(i, 1); renderDevRows();
+      });
+      row.appendChild(owner); row.appendChild(device); row.appendChild(os); row.appendChild(del);
+      list.appendChild(row);
+    });
+  }
+  function applyDevEditor(){
+    cfg.devices = devEditCfg
+      .filter(function(d){ return (d.device || "").trim(); })
+      .map(function(d){
+        return { owner:(d.owner || "").trim(), device:d.device.trim(), os:(d.os || "").trim() };
+      });
+    renderDeviceSel(); update();
+    autoSave();
+  }
+  $("btnDevEdit").addEventListener("click", function(){
+    var box = $("devEditor");
+    if(box.style.display === "block"){ box.style.display = "none"; return; }
+    devEditCfg = JSON.parse(JSON.stringify(cfg.devices || []));
+    renderDevRows();
+    box.style.display = "block";
+  });
+  $("btnDevClose").addEventListener("click", function(){ $("devEditor").style.display = "none"; });
+  $("btnDevAdd").addEventListener("click", function(){
+    devEditCfg.push({owner:"", device:"", os:""});
+    renderDevRows();
+    var inputs = $("devRows").querySelectorAll("input");
+    if(inputs.length >= 3) inputs[inputs.length - 3].focus();
+  });
+  $("btnDevApply").addEventListener("click", function(){
+    applyDevEditor(); toast("기기 목록이 적용됐어요");
+  });
+
+  var toastTimer;
+  function toast(msg){
+    var t = $("toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 1800);
+  }
+
+  /* ── 섹션 편집기 ── */
+  var editCfg = null;
+
+  function openEditor(){
+    editCfg = JSON.parse(JSON.stringify(cfg));
+    renderEditor();
+    $("editorCard").classList.add("open");
+    $("editorCard").scrollIntoView({behavior:"smooth", block:"start"});
+  }
+  function renderEditor(){
+    var list = $("secList");
+    list.innerHTML = "";
+    editCfg.sections.forEach(function(s, i){
+      var row = document.createElement("div");
+      row.className = "secRow";
+
+      var up = mvBtn("↑", function(){ if(i>0){ swap(i, i-1); } });
+      var dn = mvBtn("↓", function(){ if(i<editCfg.sections.length-1){ swap(i, i+1); } });
+
+      var name = document.createElement("input");
+      name.type = "text"; name.value = s.title; name.placeholder = "섹션 이름";
+      name.setAttribute("aria-label","섹션 이름");
+      name.addEventListener("input", function(){ s.title = name.value; });
+
+      var hint = document.createElement("input");
+      hint.type = "text"; hint.className = "hintIn";
+      hint.value = s.hint || ""; hint.placeholder = "안내 문구 (선택)";
+      hint.setAttribute("aria-label","안내 문구");
+      hint.addEventListener("input", function(){ s.hint = hint.value; });
+
+      var optUrl = optBox("URL도우미", s.url, function(v){ s.url = v; });
+      var optChips = optBox("빠른문구", s.chips, function(v){ s.chips = v; });
+      var optTall = optBox("넓게", s.tall, function(v){ s.tall = v; });
+
+      var del = document.createElement("button");
+      del.type = "button"; del.className = "del"; del.textContent = "✕";
+      del.title = "섹션 삭제";
+      del.addEventListener("click", function(){
+        if(confirm('"' + (s.title || "이 섹션") + '" 섹션을 삭제할까요?')){
+          editCfg.sections.splice(i, 1); renderEditor();
+        }
+      });
+
+      row.appendChild(up); row.appendChild(dn);
+      row.appendChild(name); row.appendChild(hint);
+      row.appendChild(optUrl); row.appendChild(optChips); row.appendChild(optTall);
+      row.appendChild(del);
+      list.appendChild(row);
+    });
+    $("chipEdit").value = editCfg.chips.map(function(c){ return c.label + " | " + c.text; }).join("\n");
+
+    function swap(a, b){
+      var t = editCfg.sections[a];
+      editCfg.sections[a] = editCfg.sections[b];
+      editCfg.sections[b] = t;
+      renderEditor();
+    }
+    function mvBtn(txt, fn){
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "mv"; b.textContent = txt;
+      b.addEventListener("click", fn);
+      return b;
+    }
+    function optBox(label, val, onCh){
+      var lb = document.createElement("label");
+      lb.className = "opt";
+      var cb = document.createElement("input");
+      cb.type = "checkbox"; cb.checked = !!val;
+      cb.addEventListener("change", function(){ onCh(cb.checked); });
+      lb.appendChild(cb); lb.appendChild(document.createTextNode(label));
+      return lb;
+    }
+  }
+  function readEditor(){
+    editCfg.sections = editCfg.sections.filter(function(s){ return (s.title || "").trim(); });
+    editCfg.chips = $("chipEdit").value.split("\n")
+      .map(function(l){ return l.trim(); }).filter(Boolean)
+      .map(function(l){
+        var i = l.indexOf("|");
+        if(i === -1) return { label:l, text:l };
+        return { label:l.slice(0,i).trim(), text:l.slice(i+1).trim() };
+      });
+    return editCfg;
+  }
+  function applyEditor(){
+    cfg = JSON.parse(JSON.stringify(readEditor()));
+    renderDesc(true); renderDeviceSel(); update();
+    autoSave();
+  }
+
+  $("btnEditor").addEventListener("click", function(){
+    if($("editorCard").classList.contains("open")) $("editorCard").classList.remove("open");
+    else openEditor();
+  });
+  $("btnCloseEditor").addEventListener("click", function(){ $("editorCard").classList.remove("open"); });
+  $("btnAddSec").addEventListener("click", function(){
+    editCfg.sections.push({title:"", hint:"", ph:"", tall:false, url:false, chips:false});
+    renderEditor();
+    var inputs = $("secList").querySelectorAll("input[type=text]");
+    if(inputs.length) inputs[inputs.length - 2].focus();
+  });
+  $("btnApply").addEventListener("click", function(){
+    applyEditor(); toast("섹션 구성이 적용됐어요");
+  });
+  $("btnDefault").addEventListener("click", function(){
+    if(!confirm("섹션 구성을 기본값으로 되돌릴까요?")) return;
+    editCfg = JSON.parse(JSON.stringify(DEFAULT_CFG));
+    renderEditor(); applyEditor(); toast("기본값으로 복원됐어요");
+  });
+
+  /* 현재 설정이 기본값으로 박힌 HTML 파일을 새로 다운로드 */
+  function saveCfgFile(){
+    var json = JSON.stringify(cfg, null, 2).replace(/</g, "\\u003c");
+
+    /* 화면 상태가 파일에 박히지 않도록 복제본을 깨끗하게 정리해서 저장 */
+    var clone = document.documentElement.cloneNode(true);
+    ["segCat","segPlat","scope","descArea","secList","pvTitle","pvDesc",
+     "deviceSel","deviceChips","devRows",
+     "modeSeg","vCatSeg","vServerSeg","vResultSeg","vBlockChips",
+     "reportRows","rptTable"].forEach(function(id){
+      var el = clone.querySelector("#" + id);
+      if(el) el.innerHTML = "";
+    });
+    ["chipEdit","toast","vPreview","rptItemEdit","resEdit","vChipEdit"].forEach(function(id){
+      var el = clone.querySelector("#" + id);
+      if(el) el.textContent = "";
+    });
+    var vpv = clone.querySelector("#vPreview"); if(vpv) vpv.classList.remove("placeholder");
+    var bp = clone.querySelector("#bugPane"); if(bp) bp.style.display = "";
+    var vp = clone.querySelector("#verifyPane"); if(vp) vp.style.display = "none";
+    var bv = clone.querySelector("#bugView"); if(bv) bv.style.display = "";
+    var vv = clone.querySelector("#verifyView"); if(vv) vv.style.display = "none";
+    var vm = clone.querySelector("#vVerMw"); if(vm) vm.style.display = "";
+    var vo = clone.querySelector("#vVerOne"); if(vo) vo.style.display = "none";
+    var rp = clone.querySelector("#reportPane"); if(rp) rp.style.display = "none";
+    var rv = clone.querySelector("#reportView"); if(rv) rv.style.display = "none";
+    var re2 = clone.querySelector("#rptEditor"); if(re2) re2.style.display = "none";
+    var re3 = clone.querySelector("#resEditor"); if(re3) re3.style.display = "none";
+    var re4 = clone.querySelector("#vChipEditor"); if(re4) re4.style.display = "none";
+    var vcw = clone.querySelector("#vChipWrap"); if(vcw) vcw.innerHTML = "";
+    var dv = clone.querySelector("#devEditor"); if(dv) dv.style.display = "none";
+    var ec = clone.querySelector("#editorCard"); if(ec) ec.classList.remove("open");
+    var ts = clone.querySelector("#toast"); if(ts) ts.classList.remove("show");
+    var nb = clone.querySelector("#noteBoth"); if(nb) nb.setAttribute("style","display:none");
+    var ns = clone.querySelector("#noteServer"); if(ns) ns.setAttribute("style","display:none");
+    var sc = clone.querySelector("#scopeCustom"); if(sc) sc.setAttribute("style","display:none;margin-top:6px");
+
+    var doc = "<!DOCTYPE html>\n" + clone.outerHTML;
+    var re = /(<script id="cfg" type="application\/json">)[\s\S]*?(<\/script>)/;
+    if(!re.test(doc)){ toast("저장 실패 — 설정 영역을 찾지 못했어요"); return; }
+    doc = doc.replace(re, "$1\n" + json + "\n$2");
+    var blob = new Blob([doc], {type:"text/html;charset=utf-8"});
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "버그리포트-작성기-내설정.html";
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 500);
+    toast("내 설정이 담긴 파일이 다운로드됐어요");
+  }
+  $("btnExport").addEventListener("click", function(){
+    saveCfgFile();
+  });
+
+  /* ── 모드 전환 ── */
+  var MODES = { "버그 등록":"bug", "이슈 확인":"verify", "일일보고":"report" };
+  var mode = "bug";
+  function modeLabel(){
+    var lbl = "버그 등록";
+    Object.keys(MODES).forEach(function(k){ if(MODES[k] === mode) lbl = k; });
+    return lbl;
+  }
+  function syncMode(){
+    $("bugPane").style.display = (mode === "bug") ? "" : "none";
+    $("verifyPane").style.display = (mode === "verify") ? "" : "none";
+    $("reportPane").style.display = (mode === "report") ? "" : "none";
+    $("bugView").style.display = (mode === "bug") ? "" : "none";
+    $("verifyView").style.display = (mode === "verify") ? "" : "none";
+    $("reportView").style.display = (mode === "report") ? "" : "none";
+  }
+  function renderModeSeg(){
+    renderSeg($("modeSeg"), Object.keys(MODES), modeLabel(), function(v){
+      mode = MODES[v];
+      renderModeSeg(); syncMode();
+    });
+  }
+
+  /* ── 이슈 확인 ── */
+  var vState = { cat:"MW", servers:["REAL"], result:"Done" };
+  var vBlocks = [];
+  var V_SERVERS = ["REAL","STG","QA"];
+  function renderVSegs(){
+    renderSeg($("vCatSeg"), ["MW","통합앱","PC"], vState.cat, function(v){
+      vState.cat = v; renderVSegs(); vUpdate();
+    });
+    /* 서버는 다중 선택 (클릭할 때마다 켜고 끄기) */
+    var sv = $("vServerSeg");
+    sv.innerHTML = "";
+    V_SERVERS.forEach(function(s){
+      var b = document.createElement("button");
+      b.type = "button"; b.textContent = s;
+      if(vState.servers.indexOf(s) !== -1) b.classList.add("on");
+      b.addEventListener("click", function(){
+        var i = vState.servers.indexOf(s);
+        if(i === -1) vState.servers.push(s); else vState.servers.splice(i, 1);
+        renderVSegs(); vUpdate();
+      });
+      sv.appendChild(b);
+    });
+    var res = (cfg.verifyResults && cfg.verifyResults.length) ? cfg.verifyResults : ["Done","FAIL"];
+    if(res.indexOf(vState.result) === -1) vState.result = res[0];
+    renderSeg($("vResultSeg"), res, vState.result, function(v){
+      vState.result = v; renderVSegs(); vUpdate();
+    });
+    $("vVerMw").style.display = (vState.cat === "MW") ? "" : "none";
+    $("vVerOne").style.display = (vState.cat === "MW") ? "none" : "";
+    $("vVer").placeholder = (vState.cat === "PC") ? "Chrome 버전" : "예: Android 4.2.0(1042003)";
+  }
+  function vCurrentBlock(){
+    var ver = [];
+    if(vState.cat === "MW"){
+      if($("vAos").value.trim()) ver.push("AOS / " + $("vAos").value.trim());
+      if($("vIos").value.trim()) ver.push("IOS / " + $("vIos").value.trim());
+    } else if($("vVer").value.trim()){
+      ver.push($("vVer").value.trim());
+    }
+    return { cat:vState.cat, ver:ver,
+             server: V_SERVERS.filter(function(s){ return vState.servers.indexOf(s) !== -1; }).join(", "),
+             result:vState.result,
+             note:$("vNote").value.replace(/\s+$/,"") };
+  }
+  function vBlockEmpty(b){ return !b.ver.length && !b.note.trim(); }
+  function vBlockText(b){
+    var lines = [b.cat];
+    if(b.ver.length){
+      lines.push("- Ver : " + b.ver[0]);
+      for(var i = 1; i < b.ver.length; i++) lines.push("         " + b.ver[i]);
+    }
+    lines.push("- 서버 : " + b.server);
+    lines.push("- 결과 : " + b.result);
+    var notes = (b.note || "").split("\n");
+    lines.push("- 확인 내용 : " + notes[0]);
+    for(var j = 1; j < notes.length; j++) lines.push("                 " + notes[j]);
+    return lines.join("\n");
+  }
+  function vFullText(){
+    var arr = vBlocks.slice();
+    var cur = vCurrentBlock();
+    if(!vBlockEmpty(cur)) arr.push(cur);
+    return arr.map(vBlockText).join("\n\n");
+  }
+  function vUpdate(){
+    var t = vFullText();
+    if(t){
+      $("vPreview").textContent = t;
+      $("vPreview").classList.remove("placeholder");
+    } else {
+      $("vPreview").textContent = "왼쪽에서 확인 내용을 입력하면 여기에 미리보기가 떠요.";
+      $("vPreview").classList.add("placeholder");
+    }
+  }
+  function renderVBlockChips(){
+    var wrap = $("vBlockChips");
+    wrap.innerHTML = "";
+    vBlocks.forEach(function(b, i){
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = b.cat + " · " + b.result + " ✕";
+      btn.title = "클릭하면 제거";
+      btn.addEventListener("click", function(){
+        vBlocks.splice(i, 1); renderVBlockChips(); vUpdate();
+      });
+      wrap.appendChild(btn);
+    });
+  }
+  function fillVerDefaults(){
+    var v = cfg.verifyVer || {};
+    $("vAos").value = v.aos || "";
+    $("vIos").value = v.ios || "";
+    $("vVer").value = v.app || "";
+  }
+  function vClearInputs(){
+    $("vNote").value = "";
+    fillVerDefaults();
+  }
+  $("vSaveVer").addEventListener("click", function(){
+    cfg.verifyVer = {
+      aos: $("vAos").value.trim(),
+      ios: $("vIos").value.trim(),
+      app: $("vVer").value.trim()
+    };
+    autoSave();
+    toast("기본 버전 저장 완료 · 다음에 열 때 자동으로 채워져요");
+  });
+  $("vAddBlock").addEventListener("click", function(){
+    var cur = vCurrentBlock();
+    if(vBlockEmpty(cur)){ toast("확인 내용을 먼저 입력해 주세요"); return; }
+    vBlocks.push(cur);
+    vClearInputs();
+    renderVBlockChips(); vUpdate();
+    toast("확인 블록이 추가됐어요");
+  });
+  $("vClear").addEventListener("click", function(){ vClearInputs(); vUpdate(); });
+  function verifyChips(){
+    return (cfg.verifyChips && cfg.verifyChips.length)
+      ? cfg.verifyChips : ["하여 Done 처리","하여 Reopen 처리"];
+  }
+  function renderVChips(){
+    var wrap = $("vChipWrap");
+    wrap.innerHTML = "";
+    verifyChips().forEach(function(txt){
+      var b = document.createElement("button");
+      b.type = "button"; b.textContent = "+ " + txt;
+      b.addEventListener("click", function(){
+        $("vNote").value = $("vNote").value.replace(/\s*$/,"") + txt;
+        $("vNote").focus(); vUpdate();
+      });
+      wrap.appendChild(b);
+    });
+  }
+  $("btnVChipEdit").addEventListener("click", function(){
+    var box = $("vChipEditor");
+    if(box.style.display === "block"){ box.style.display = "none"; return; }
+    $("vChipEdit").value = verifyChips().join("\n");
+    box.style.display = "block";
+  });
+  $("vcClose").addEventListener("click", function(){ $("vChipEditor").style.display = "none"; });
+  function applyVChips(){
+    var items = $("vChipEdit").value.split("\n")
+      .map(function(l){ return l.trim(); }).filter(Boolean);
+    if(!items.length){ toast("문구가 비어 있어요"); return false; }
+    cfg.verifyChips = items;
+    renderVChips();
+    autoSave();
+    return true;
+  }
+  $("vcApply").addEventListener("click", function(){
+    if(applyVChips()) toast("문구가 적용됐어요");
+  });
+  $("vCopy").addEventListener("click", function(){
+    var t = vFullText();
+    if(!t){ toast("복사할 내용이 없어요"); return; }
+    copy(t, "확인 내용 복사 완료");
+  });
+  ["vAos","vIos","vVer","vNote"].forEach(function(id){
+    $(id).addEventListener("input", vUpdate);
+  });
+
+  /* ── 결과 옵션 편집 ── */
+  $("btnResEdit").addEventListener("click", function(){
+    var box = $("resEditor");
+    if(box.style.display === "block"){ box.style.display = "none"; return; }
+    $("resEdit").value = ((cfg.verifyResults && cfg.verifyResults.length) ? cfg.verifyResults : ["Done","FAIL"]).join("\n");
+    box.style.display = "block";
+  });
+  $("resClose").addEventListener("click", function(){ $("resEditor").style.display = "none"; });
+  function applyResults(){
+    var items = $("resEdit").value.split("\n")
+      .map(function(l){ return l.trim(); }).filter(Boolean);
+    if(!items.length){ toast("옵션이 비어 있어요"); return false; }
+    cfg.verifyResults = items;
+    renderVSegs(); vUpdate();
+    autoSave();
+    return true;
+  }
+  $("resApply").addEventListener("click", function(){
+    if(applyResults()) toast("결과 옵션이 적용됐어요");
+  });
+
+  /* ── 일일보고 ── */
+  var DEFAULT_REPORT_ITEMS = ["TC 작성","Test DATA 셋팅","TC 수행","이슈 등록","이슈 확인","Declined 이슈","기타"];
+  function reportItems(){
+    return (cfg.reportItems && cfg.reportItems.length) ? cfg.reportItems : DEFAULT_REPORT_ITEMS;
+  }
+  function rptValues(){
+    var vals = {};
+    Array.prototype.slice.call(document.querySelectorAll("#reportRows .rItem")).forEach(function(row){
+      vals[row.dataset.name] = {
+        count: row.querySelector(".rCount").value,
+        time: row.querySelector(".rTime").value,
+        note: row.querySelector("textarea").value
+      };
+    });
+    return vals;
+  }
+  function renderReportRows(keep){
+    var old = keep ? rptValues() : {};
+    var wrap = $("reportRows");
+    wrap.innerHTML = "";
+    reportItems().forEach(function(name){
+      var row = document.createElement("div");
+      row.className = "rItem"; row.dataset.name = name;
+      var head = document.createElement("div"); head.className = "rHead";
+      var nm = document.createElement("div"); nm.className = "rname"; nm.textContent = name;
+      var cnt = document.createElement("input");
+      cnt.type = "text"; cnt.className = "rCount"; cnt.placeholder = "건수";
+      cnt.setAttribute("aria-label", name + " 건수");
+      var tm = document.createElement("input");
+      tm.type = "text"; tm.className = "rTime"; tm.placeholder = "시간 (예: 6.5)";
+      tm.setAttribute("aria-label", name + " 시간");
+      var ta = document.createElement("textarea");
+      ta.placeholder = "- 상세 내용 작성";
+      ta.setAttribute("aria-label", name + " 상세");
+      var o = old[name];
+      if(o){ cnt.value = o.count; tm.value = o.time; ta.value = o.note; }
+      /* 이슈 등록·이슈 확인·Declined 이슈 등은 상세 내용에서 건수 자동 계산 */
+      if(/이슈/.test(name)){
+        var nmHint = document.createElement("small");
+        nmHint.textContent = "건수 자동 계산 (엔터·쉼표·따옴표로 구분) · 수기 입력도 가능";
+        nm.appendChild(nmHint);
+        cnt.placeholder = "자동";
+        ta.addEventListener("input", function(){
+          var n = ta.value.split(/[\n,"']+/)
+            .map(function(x){ return x.trim(); })
+            .filter(Boolean).length;
+          cnt.value = n ? String(n) : "";
+        });
+      }
+      [cnt, tm, ta].forEach(function(el){ el.addEventListener("input", rptUpdate); });
+      head.appendChild(nm); head.appendChild(cnt); head.appendChild(tm);
+      row.appendChild(head); row.appendChild(ta);
+      wrap.appendChild(row);
+    });
+  }
+  function rptCell(v){
+    var lines = [];
+    var t = v.time.trim();
+    if(t){
+      /* 숫자만 적으면 H 자동 부착 */
+      if(/^\d+(\.\d+)?$/.test(t)) t += "H";
+      lines.push(t);
+    }
+    v.note.split("\n").forEach(function(l){
+      if(l.trim()) lines.push(l.replace(/\s+$/,""));
+    });
+    return lines.join("\n");
+  }
+  function rptText(){
+    var vals = rptValues();
+    return reportItems().map(function(name){
+      var v = vals[name] || {count:"", time:"", note:""};
+      var cell = rptCell(v);
+      if(/[\n"\t]/.test(cell)) cell = '"' + cell.replace(/"/g, '""') + '"';
+      return name + "\t" + (v.count.trim() || "0") + "\t" + cell;
+    }).join("\n");
+  }
+  function rptUpdate(){
+    var vals = rptValues();
+    var html = "<tr><th>항목</th><th>건수</th><th>내용</th></tr>";
+    reportItems().forEach(function(name){
+      var v = vals[name] || {count:"", time:"", note:""};
+      html += "<tr><td>" + esc(name) + "</td><td>" + esc(v.count.trim() || "0")
+            + "</td><td class=\"cell\">" + esc(rptCell(v)) + "</td></tr>";
+    });
+    $("rptTable").innerHTML = html;
+  }
+  $("rptCopy").addEventListener("click", function(){
+    copy(rptText(), "보고 내용 복사 완료");
+  });
+  $("rptClear").addEventListener("click", function(){
+    if(!confirm("일일보고 입력 내용을 모두 지울까요?")) return;
+    renderReportRows(false); rptUpdate();
+  });
+  $("btnRptEdit").addEventListener("click", function(){
+    var box = $("rptEditor");
+    if(box.style.display === "block"){ box.style.display = "none"; return; }
+    $("rptItemEdit").value = reportItems().join("\n");
+    box.style.display = "block";
+  });
+  $("rptClose").addEventListener("click", function(){ $("rptEditor").style.display = "none"; });
+  function applyRptItems(){
+    var items = $("rptItemEdit").value.split("\n")
+      .map(function(l){ return l.trim(); }).filter(Boolean);
+    if(!items.length){ toast("항목이 비어 있어요"); return false; }
+    cfg.reportItems = items;
+    renderReportRows(true); rptUpdate();
+    autoSave();
+    return true;
+  }
+  $("rptApply").addEventListener("click", function(){
+    if(applyRptItems()) toast("보고 항목이 적용됐어요");
+  });
+
+  /* ── 작성 내용 초기화 ── */
+  $("btnReset").addEventListener("click", function(){
+    if(!confirm("작성 중인 내용을 모두 지울까요? (섹션 구성은 유지돼요)")) return;
+    document.querySelectorAll(".wrap input[type=text], .wrap textarea").forEach(function(el){
+      if(el.id !== "chipEdit") el.value = "";
+    });
+    document.querySelectorAll(".wrap input[type=checkbox]").forEach(function(el){
+      if(!el.closest("#editorCard")) el.checked = false;
+    });
+    chosenDevices = []; renderDeviceChips();
+    state.cat = "통합앱"; state.plat = "Android";
+    renderCat(); renderPlat(); renderScope(); update();
+  });
+
+  /* ── 정적 입력 리스너 ── */
+  document.querySelectorAll(".wrap input[type=text], .wrap select").forEach(function(el){
+    el.addEventListener("input", update);
+    el.addEventListener("change", update);
+  });
+
+  /* ── 다크 모드 ── */
+  function applyTheme(){
+    var dark = (cfg.theme === "dark");
+    document.body.classList.toggle("dark", dark);
+    $("btnTheme").textContent = dark ? "☀️ 라이트" : "🌙 다크";
+  }
+  $("btnTheme").addEventListener("click", function(){
+    cfg.theme = (cfg.theme === "dark") ? "light" : "dark";
+    applyTheme();
+    autoSave();
+    toast(cfg.theme === "dark" ? "다크 모드" : "라이트 모드");
+  });
+
+  applyTheme();
+  renderModeSeg(); syncMode(); renderVSegs(); fillVerDefaults(); renderVChips(); vUpdate();
+  renderReportRows(false); rptUpdate();
+  renderCat(); renderPlat(); renderScope(); renderDeviceSel(); renderDesc(false); update();
+})();
+</script>
+</body>
+</html>
