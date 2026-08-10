@@ -451,6 +451,16 @@
   function autoSave(){
     try{ localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }catch(e){}
   }
+  /* 예전에 저장된 문구에 하이픈이 없으면 보정 */
+  (function normalizeChips(){
+    if(cfg.chips) cfg.chips = cfg.chips.map(function(c){
+      return { label: (c.label || "").replace(/^-\s*/, ""),
+               text: /^-\s/.test(c.text || "") ? c.text : "- " + (c.text || "") };
+    });
+    if(cfg.reportChips) cfg.reportChips = cfg.reportChips.map(function(t){
+      return /^-\s/.test(t) ? t : "- " + t;
+    });
+  })();
 
   /* ── 제목 데이터 ── */
   var MAP = {
@@ -671,8 +681,17 @@
             b.type = "button"; b.textContent = "+ " + ch.label;
             b.style.cssText = "border-top-right-radius:0;border-bottom-right-radius:0;border-right:none";
             b.addEventListener("click", function(){
-              ta.value = (ta.value ? ta.value.replace(/\s*$/,"") + "\n" : "") + ch.text;
-              ta.focus(); update();
+              var cur = ta.value;
+              if(/(^|\n)-\s*$/.test(cur)){
+                /* 비어 있는 하이픈 줄이면 그 자리에 채우기 */
+                cur = cur.replace(/(^|\n)-\s*$/, "$1");
+                ta.value = cur + ch.text;
+              } else {
+                ta.value = (cur ? cur.replace(/\s*$/,"") + "\n" : "") + ch.text;
+              }
+              ta.focus();
+              ta.selectionStart = ta.selectionEnd = ta.value.length;
+              update();
             });
             var x = document.createElement("button");
             x.type = "button"; x.textContent = "✕";
@@ -1330,8 +1349,16 @@
             var cb = document.createElement("button");
             cb.type = "button"; cb.textContent = "+ " + txt.replace(/^-\s*/, "");
             cb.addEventListener("click", function(){
-              ta.value = (ta.value ? ta.value.replace(/\s*$/,"") + "\n" : "") + txt;
-              ta.focus(); rptUpdate();
+              var cur = ta.value;
+              if(/(^|\n)-\s*$/.test(cur)){
+                cur = cur.replace(/(^|\n)-\s*$/, "$1");
+                ta.value = cur + txt;
+              } else {
+                ta.value = (cur ? cur.replace(/\s*$/,"") + "\n" : "") + txt;
+              }
+              ta.focus();
+              ta.selectionStart = ta.selectionEnd = ta.value.length;
+              rptUpdate();
             });
             chipWrap.appendChild(cb);
           });
