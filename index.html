@@ -303,6 +303,23 @@
   /* 일일보고 */
   .rptTop{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
   .rptTop input[type=date]{width:auto;flex:none}
+  .helpDot{
+    width:20px;height:20px;flex:none;border-radius:50%;border:1px solid var(--line);
+    background:#FBFCFD;color:var(--muted);font:inherit;font-size:.75rem;font-weight:700;
+    line-height:1;cursor:pointer;padding:0;
+  }
+  .helpDot:hover,.helpDot.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  body.dark .helpDot{background:#11151B;border-color:#3A434F}
+  .helpBox{
+    display:none;border:1px solid var(--accent);background:var(--accent-soft);
+    border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:.84rem;line-height:1.6;
+  }
+  .helpBox.on{display:block}
+  .helpBox b{display:block;margin-bottom:5px}
+  .helpBox p{margin:0 0 7px}
+  .helpBox p b,.helpBox li b{display:inline}
+  .helpBox ul{margin:0;padding-left:18px}
+  .helpBox li{margin-bottom:3px}
   .rptSaved{margin-left:auto;font-size:.78rem;color:var(--accent);white-space:nowrap}
   .rItem{margin-bottom:12px}
   .rHead{display:flex;gap:8px;align-items:center;margin-bottom:5px}
@@ -788,8 +805,19 @@
           <input type="date" id="rptDate" aria-label="보고 날짜">
           <button class="btn sm" id="rptToday" type="button">오늘</button>
           <select id="rptPullTarget" style="width:auto;flex:none" aria-label="가져올 항목"></select>
-          <button class="btn sm" id="rptPullDone" type="button" title="할 일·일정에서 이 날 완료한 항목 가져오기">↙ 완료한 할 일 가져오기</button>
+          <button class="btn sm" id="rptPullDone" type="button">↙ 완료한 할 일 가져오기</button>
+          <button class="helpDot" id="rptPullHelp" type="button" aria-label="도움말">?</button>
           <span class="rptSaved" id="rptSaved"></span>
+        </div>
+        <div class="helpBox" id="rptPullHelpBox">
+          <b>완료한 할 일 가져오기</b>
+          <p><b>할 일·일정</b> 탭에서 <b>보고 날짜와 같은 날</b>에 체크(완료)한 할 일들을, 왼쪽에서 고른 항목의 상세 내용으로 한 번에 옮겨 적어줘요.</p>
+          <ul>
+            <li>틈틈이 할 일 탭에 기록해두면, 버튼 한 번으로 일일보고가 채워져요.</li>
+            <li>기존에 적어둔 내용은 지워지지 않고 <b>아래에 이어서</b> 추가돼요.</li>
+            <li>이슈 관련 항목으로 가져오면 <b>건수도 자동 계산</b>돼요.</li>
+            <li>완료 표시하지 않은 할 일은 가져오지 않아요.</li>
+          </ul>
         </div>
         <div id="reportRows"></div>
         <div class="editorFoot">
@@ -1506,6 +1534,8 @@
     var he2 = clone.querySelector("#holEdit"); if(he2) he2.textContent = "";
     var re2 = clone.querySelector("#rptEditor"); if(re2) re2.style.display = "none";
     var re3 = clone.querySelector("#resEditor"); if(re3) re3.style.display = "none";
+    var hb = clone.querySelector("#rptPullHelpBox"); if(hb) hb.classList.remove("on");
+    var hd = clone.querySelector("#rptPullHelp"); if(hd) hd.classList.remove("on");
     var re4 = clone.querySelector("#vChipEditor"); if(re4) re4.style.display = "none";
     var gp = clone.querySelector("#guidePanel"); if(gp) gp.classList.remove("open");
     var gb = clone.querySelector("#guideBackdrop"); if(gb) gb.remove();
@@ -2431,6 +2461,10 @@
     saveReport();
     rptDate = ymd(new Date());
     loadReport();
+  });
+  $("rptPullHelp").addEventListener("click", function(){
+    var on = $("rptPullHelpBox").classList.toggle("on");
+    $("rptPullHelp").classList.toggle("on", on);
   });
   $("rptPullDone").addEventListener("click", function(){
     var done = (todoStore[rptDate] || []).filter(function(t){ return t.done; });
