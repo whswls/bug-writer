@@ -301,6 +301,9 @@
   .tdEmpty{color:var(--muted);font-size:.85rem;padding:14px 2px}
 
   /* 일일보고 */
+  .rptTop{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .rptTop input[type=date]{width:auto;flex:none}
+  .rptSaved{margin-left:auto;font-size:.78rem;color:var(--accent);white-space:nowrap}
   .rItem{margin-bottom:12px}
   .rHead{display:flex;gap:8px;align-items:center;margin-bottom:5px}
   .rHead .rname{flex:1;font-size:.88rem;font-weight:600}
@@ -781,6 +784,13 @@
     <div id="reportPane" style="display:none">
       <div class="card">
         <h2>일일보고 <button class="h2btn" id="btnRptEdit" type="button">✎ 항목 편집</button></h2>
+        <div class="rptTop">
+          <input type="date" id="rptDate" aria-label="보고 날짜">
+          <button class="btn sm" id="rptToday" type="button">오늘</button>
+          <select id="rptPullTarget" style="width:auto;flex:none" aria-label="가져올 항목"></select>
+          <button class="btn sm" id="rptPullDone" type="button" title="할 일·일정에서 이 날 완료한 항목 가져오기">↙ 완료한 할 일 가져오기</button>
+          <span class="rptSaved" id="rptSaved"></span>
+        </div>
         <div id="reportRows"></div>
         <div class="editorFoot">
           <button class="btn ghost sm" id="rptClear" type="button">↺ 입력 지우기</button>
@@ -1601,7 +1611,8 @@
   }
   function vBlockEmpty(b){ return !b.ver.length && !b.note.trim(); }
   function vBlockText(b){
-    var lines = [b.cat];
+    /* 구분(통합앱/MW/PC)은 화면 구분용이라 복사 내용에는 넣지 않음 */
+    var lines = [];
     if(b.ver.length){
       lines.push("- Ver : " + b.ver[0]);
       for(var i = 1; i < b.ver.length; i++) lines.push("         " + b.ver[i]);
@@ -2373,6 +2384,72 @@
     r.readAsText(f);
   });
 
+  /* ── 일일보고 (날짜별 저장) ── */
+  var RPT_KEY = CFG_KEY + "-reports";
+  var reportStore = (function(){
+    try{ var raw = localStorage.getItem(RPT_KEY); if(raw) return JSON.parse(raw) || {}; }catch(e){}
+    return {};
+  })();
+  var rptDate = ymd(new Date());
+  function saveReport(){
+    var vals = rptValues();
+    var has = Object.keys(vals).some(function(k){
+      var v = vals[k];
+      return (v.count || "").trim() || (v.time || "").trim() || (v.note || "").trim();
+    });
+    if(has) reportStore[rptDate] = vals; else delete reportStore[rptDate];
+    try{ localStorage.setItem(RPT_KEY, JSON.stringify(reportStore)); }catch(e){}
+    var el = $("rptSaved");
+    el.textContent = has ? "저장됨" : "";
+  }
+  function fillPullTarget(){
+    var sel = $("rptPullTarget");
+    var prev = sel.value;
+    sel.innerHTML = "";
+    reportItems().forEach(function(name){
+      var o = document.createElement("option");
+      o.value = name; o.textContent = name;
+      sel.appendChild(o);
+    });
+    if(prev && reportItems().indexOf(prev) > -1) sel.value = prev;
+    else if(reportItems().indexOf("기타") > -1) sel.value = "기타";
+  }
+  function loadReport(){
+    fillPullTarget();
+    $("rptDate").value = rptDate;
+    renderReportRows(false, reportStore[rptDate] || {});
+    rptUpdate();
+    $("rptSaved").textContent = reportStore[rptDate] ? "저장됨" : "";
+  }
+  $("rptDate").addEventListener("change", function(){
+    if(!$("rptDate").value) return;
+    saveReport();
+    rptDate = $("rptDate").value;
+    loadReport();
+  });
+  $("rptToday").addEventListener("click", function(){
+    saveReport();
+    rptDate = ymd(new Date());
+    loadReport();
+  });
+  $("rptPullDone").addEventListener("click", function(){
+    var done = (todoStore[rptDate] || []).filter(function(t){ return t.done; });
+    if(!done.length){ toast("그 날 완료한 할 일이 없어요"); return; }
+    var want = $("rptPullTarget").value;
+    var target = null;
+    Array.prototype.slice.call(document.querySelectorAll("#reportRows .rItem")).forEach(function(row){
+      if(row.dataset.name === want) target = row;
+    });
+    if(!target) target = document.querySelector("#reportRows .rItem:last-child");
+    if(!target){ toast("가져올 항목이 없어요"); return; }
+    var ta = target.querySelector("textarea");
+    var add = done.map(function(t){ return "- " + t.text; }).join("\n");
+    ta.value = (ta.value ? ta.value.replace(/\s*$/,"") + "\n" : "") + add;
+    ta.dispatchEvent(new Event("input"));
+    rptUpdate(); saveReport();
+    toast(done.length + "건 가져왔어요");
+  });
+
   /* ── 일일보고 ── */
   var JIRA_TODAY_URL = $("btnJiraToday").getAttribute("href");
   var DEFAULT_REPORT_ITEMS = ["TC 작성","Test DATA 셋팅","TC 수행","이슈 등록","이슈 확인","Declined 이슈","기타"];
@@ -2390,8 +2467,8 @@
     });
     return vals;
   }
-  function renderReportRows(keep){
-    var old = keep ? rptValues() : {};
+  function renderReportRows(keep, preset){
+    var old = keep ? rptValues() : (preset || {});
     var wrap = $("reportRows");
     wrap.innerHTML = "";
     reportItems().forEach(function(name){
@@ -2425,7 +2502,10 @@
         };
         ta.addEventListener("input", autoCount);
       }
-      [cnt, tm, ta].forEach(function(el){ el.addEventListener("input", rptUpdate); });
+      [cnt, tm, ta].forEach(function(el){
+        el.addEventListener("input", rptUpdate);
+        el.addEventListener("input", saveReport);
+      });
       head.appendChild(nm); head.appendChild(cnt); head.appendChild(tm);
       row.appendChild(head); row.appendChild(ta);
 
@@ -2583,7 +2663,7 @@
   });
   $("rptClear").addEventListener("click", function(){
     if(!confirm("일일보고 입력 내용을 모두 지울까요?")) return;
-    renderReportRows(false); rptUpdate();
+    renderReportRows(false); rptUpdate(); saveReport();
   });
   $("btnRptEdit").addEventListener("click", function(){
     var box = $("rptEditor");
@@ -2597,7 +2677,7 @@
       .map(function(l){ return l.trim(); }).filter(Boolean);
     if(!items.length){ toast("항목이 비어 있어요"); return false; }
     cfg.reportItems = items;
-    renderReportRows(true); rptUpdate();
+    renderReportRows(true); rptUpdate(); saveReport(); fillPullTarget();
     autoSave();
     return true;
   }
@@ -2657,7 +2737,7 @@
 
   applyTheme();
   renderModeSeg(); syncMode(); renderVSegs(); fillVerDefaults(); renderVChips(); vUpdate();
-  renderReportRows(false); rptUpdate();
+  loadReport();
   renderEvKind(); renderEvents(); renderLeaveSum(); renderCalendar(); renderTodos(); renderBkNote();
   renderCat(); renderPlat(); renderScope(); renderDeviceSel(); renderDesc(false); update();
 })();
