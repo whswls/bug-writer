@@ -390,6 +390,10 @@
   #guideBackdrop{display:none;position:fixed;inset:0;background:rgba(10,14,20,.32);z-index:39}
   #guideBackdrop.open{display:block}
 
+  .ownerLinks{margin-top:14px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 18px}
+  .ownerLinks strong{color:var(--ink);font-size:.78rem;font-family:var(--mono);letter-spacing:.06em;display:block;margin-bottom:9px}
+  .ownerBtns{display:flex;gap:8px;flex-wrap:wrap}
+
   #toast{
     position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);
     background:var(--chip);color:var(--chip-ink);padding:10px 20px;border-radius:999px;
@@ -862,6 +866,14 @@
         <li>이미지는 그림판 등으로 <b>해당 영역 표시</b>해서 첨부</li>
         <li>동영상은 <b>iOS · Android 둘 다</b> 올려서 비교 가능하게</li>
       </ul>
+    </div>
+
+    <div class="ownerLinks">
+      <strong>담당자 확인</strong>
+      <div class="ownerBtns">
+        <a class="btn sm" href="https://ssgtoolchain.atlassian.net/wiki/spaces/em0001151/pages/107781188" target="_blank" rel="noopener">👤 전시 개발 담당자</a>
+        <a class="btn sm" href="https://ssgtoolchain.atlassian.net/wiki/spaces/DIAPP/overview?homepageId=85819394" target="_blank" rel="noopener">📱 앱 개발 담당자</a>
+      </div>
     </div>
     </div><!-- /bugView -->
 
@@ -2461,7 +2473,7 @@
           saveEvents();
         }
         renderCalendar(); renderTodos(); renderEvents(); renderLeaveSum(); renderBkNote();
-        toast("복원 완료 · 날짜 " + addedDays + "일, 일정 " + addedEv + "건");
+        toast("복원 완료 · 할 일 " + addedDays + "일, 일정 " + addedEv + "건");
       }catch(e){
         toast("불러오지 못했어요 · 백업 파일이 맞는지 확인해 주세요");
       }
