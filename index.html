@@ -196,6 +196,9 @@
 
   /* 일정 바 — 모든 칸에서 같은 높이에 오도록 고정 배치 */
   .calBars{position:absolute;left:0;right:0;top:26px;display:flex;flex-direction:column;gap:2px;z-index:1}
+  /* 제목이 들어간 칸은 뒤 칸 위로 그려서 이름이 온전히 보이게 */
+  .calBars.hasLabel{z-index:3}
+  .calBars .calBar{flex:none;box-sizing:border-box}
   .calBar{
     height:16px;border-radius:3px;font-size:.68rem;line-height:16px;
     padding:0 5px;color:#fff;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
@@ -234,6 +237,25 @@
   .evnCard.soon .evnDday{background:var(--accent-soft);color:var(--accent)}
   .evnCard.today .evnDday{background:#fff;color:var(--bug)}
   .evnDot{width:9px;height:9px;border-radius:3px;flex:none}
+
+  /* 진행 현황 */
+  #todoSummary{padding:14px 18px}
+  .smHead{font-size:.9rem;font-weight:700;margin-bottom:4px}
+  .smCount{font-size:.8rem;color:var(--muted);margin-bottom:12px}
+  .smLabel{font-size:.72rem;font-family:var(--mono);letter-spacing:.06em;color:var(--muted);margin:14px 0 6px}
+  .smRow{display:flex;gap:8px;align-items:flex-start;font-size:.87rem;padding:4px 0;line-height:1.5}
+  .smBox{
+    flex:none;width:15px;height:15px;border-radius:4px;border:1.5px solid var(--line);
+    margin-top:3px;position:relative;
+  }
+  .smRow.done .smBox{background:var(--accent);border-color:var(--accent)}
+  .smRow.done .smBox::after{
+    content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;
+    border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg);
+  }
+  .smRow.done span{text-decoration:line-through;color:var(--muted)}
+  .smEmpty{font-size:.85rem;color:var(--muted);padding:2px 0}
+  .smSoon{font-size:.83rem;color:var(--muted);padding:3px 0}
 
   .bkAlert{
     display:none;align-items:center;gap:10px;border:1px solid var(--bug);background:var(--bug-soft);
@@ -817,7 +839,7 @@
           <div class="ticket-title">진행 현황</div>
         </div>
         <div id="evNow"></div>
-        <div class="desc" id="todoSummary"></div>
+        <div id="todoSummary"></div>
         <div class="copybar">
           <button class="btn primary" id="todoCopy" type="button">남은 할 일 복사</button>
         </div>
@@ -1532,7 +1554,14 @@
   var V_SERVERS = ["REAL","STG","QA"];
   function renderVSegs(){
     renderSeg($("vCatSeg"), ["MW","통합앱","PC"], vState.cat, function(v){
-      vState.cat = v; renderVSegs(); vUpdate();
+      var prev = vState.cat;
+      vState.cat = v;
+      /* 통합앱 ↔ PC 는 서로 다른 버전을 쓰므로 전환할 때만 값 교체 */
+      if(prev !== v && prev !== "MW" && v !== "MW"){
+        var vv = cfg.verifyVer || {};
+        $("vVer").value = (v === "PC") ? (vv.pc || "") : (vv.app || "");
+      }
+      renderVSegs(); vUpdate();
     });
     /* 서버는 다중 선택 (클릭할 때마다 켜고 끄기) */
     var sv = $("vServerSeg");
@@ -1556,11 +1585,6 @@
     $("vVerMw").style.display = (vState.cat === "MW") ? "" : "none";
     $("vVerOne").style.display = (vState.cat === "MW") ? "none" : "";
     $("vVer").placeholder = (vState.cat === "PC") ? "Chrome 버전" : "예: Android 4.2.0(1042003)";
-    /* 통합앱·PC는 서로 다른 버전 값을 사용 */
-    if(vState.cat !== "MW"){
-      var v = cfg.verifyVer || {};
-      $("vVer").value = (vState.cat === "PC") ? (v.pc || "") : (v.app || "");
-    }
   }
   function vCurrentBlock(){
     var ver = [];
@@ -1915,15 +1939,27 @@
       if(evs.length){
         var bars = document.createElement("div");
         bars.className = "calBars";
+        var hasLabel = false;
         evs.slice(0, 4).forEach(function(ev){
           var bar = document.createElement("div");
-          var isStart = (key === ev.start), isEnd = (key === (ev.end || ev.start));
+          var end = ev.end || ev.start;
+          var isStart = (key === ev.start), isEnd = (key === end);
           var pos = (isStart && isEnd) ? "" : (isStart ? " start" : (isEnd ? " end" : " mid"));
           bar.className = "calBar " + (COLOR_CLASS[ev.color] || "evGreen") + pos;
-          bar.textContent = (isStart || d.getDay() === 0) ? ev.title : "";
+          var showLabel = (isStart || d.getDay() === 0);
+          if(showLabel){
+            bar.textContent = ev.title;
+            hasLabel = true;
+            /* 이번 주 안에서 남은 일수만큼 폭을 늘려 제목이 잘리지 않게 */
+            var weekLeft = 6 - d.getDay();
+            var evLeft = dayDiff(key, end);
+            var span = Math.min(weekLeft, evLeft) + 1;
+            if(span > 1) bar.style.width = "calc(" + (span * 100) + "% + " + ((span - 1) * 5) + "px)";
+          }
           bar.title = ev.title;
           bars.appendChild(bar);
         });
+        if(hasLabel) bars.className += " hasLabel";
         if(evs.length > 4){
           var more = document.createElement("div");
           more.className = "calMore"; more.textContent = "+" + (evs.length - 4);
@@ -2082,10 +2118,6 @@
     todoSummary();
     renderCalendar();
   }
-  function todoRemainText(){
-    return todosOf(selDate).filter(function(t){ return !t.done; })
-      .map(function(t){ return "- " + t.text; }).join("\n");
-  }
   function dayDiff(a, b){
     /* b - a (일수) */
     var pa = a.split("-"), pb = b.split("-");
@@ -2158,29 +2190,70 @@
       });
     }
   }
+  function todoRemainText(){
+    return todosOf(selDate).filter(function(t){ return !t.done; })
+      .map(function(t){ return "- " + t.text; }).join("\n");
+  }
+  function smLabel(box, text){
+    var el = document.createElement("div");
+    el.className = "smLabel"; el.textContent = text;
+    box.appendChild(el);
+  }
+  function smItem(box, text, done){
+    var row = document.createElement("div");
+    row.className = "smRow" + (done ? " done" : "");
+    var cb = document.createElement("span");
+    cb.className = "smBox";
+    var tx = document.createElement("span");
+    tx.textContent = text;
+    row.appendChild(cb); row.appendChild(tx);
+    box.appendChild(row);
+  }
   function todoSummary(){
     renderEvNow();
+    var box = $("todoSummary");
+    box.innerHTML = "";
     var todos = todosOf(selDate);
-    var done = todos.filter(function(t){ return t.done; }).length;
-    var el = $("todoSummary");
-    var evText = "";
+    var doneList = todos.filter(function(t){ return t.done; });
+    var openList = todos.filter(function(t){ return !t.done; });
+
+    var head = document.createElement("div");
+    head.className = "smHead"; head.textContent = fmtDay(selDate);
+    box.appendChild(head);
+    var cnt = document.createElement("div");
+    cnt.className = "smCount";
+    cnt.textContent = todos.length
+      ? "완료 " + doneList.length + " / 전체 " + todos.length
+      : "등록된 할 일이 없어요";
+    box.appendChild(cnt);
+
+    if(openList.length){
+      smLabel(box, "남은 할 일");
+      openList.forEach(function(t){ smItem(box, t.text, false); });
+    } else if(todos.length){
+      smLabel(box, "남은 할 일");
+      var em = document.createElement("div");
+      em.className = "smEmpty"; em.textContent = "모두 완료했어요 🎉";
+      box.appendChild(em);
+    }
+    if(doneList.length){
+      smLabel(box, "완료한 항목");
+      doneList.forEach(function(t){ smItem(box, t.text, true); });
+    }
+
     var upcoming = Object.keys(todoStore).filter(function(k){
       return k > selDate && (todoStore[k] || []).some(function(t){ return !t.done; });
-    }).sort().slice(0, 5).map(function(k){
-      var n = todoStore[k].filter(function(t){ return !t.done; }).length;
-      return "- " + fmtDay(k) + " · " + n + "건";
-    }).join("\n");
-    if(!todos.length){
-      el.textContent = fmtDay(selDate) + "에 등록된 할 일이 없어요." + evText
-        + (upcoming ? "\n\n[다가오는 할 일]\n" + upcoming : "");
-      el.classList.toggle("placeholder", !evText && !upcoming);
-      return;
+    }).sort().slice(0, 5);
+    if(upcoming.length){
+      smLabel(box, "다가오는 할 일");
+      upcoming.forEach(function(k){
+        var n = todoStore[k].filter(function(t){ return !t.done; }).length;
+        var row = document.createElement("div");
+        row.className = "smSoon";
+        row.textContent = fmtDay(k) + " · " + n + "건";
+        box.appendChild(row);
+      });
     }
-    el.classList.remove("placeholder");
-    el.textContent = fmtDay(selDate) + " · 완료 " + done + " / 전체 " + todos.length +
-      "\n\n[남은 할 일]\n" + (todoRemainText() || "- 없음 · 모두 완료했어요") +
-      evText +
-      (upcoming ? "\n\n[다가오는 할 일]\n" + upcoming : "");
   }
   function addTodo(){
     var v = $("todoInput").value.trim();
