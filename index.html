@@ -219,6 +219,11 @@
   .evGreen{background:#0E7C66} .evBlue{background:#2C6BC4} .evOrange{background:#D2792A}
   .evPurple{background:#6B4CC4} .evRed{background:#C0453D}
 
+  .verRow{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .verRow input[type=text]{flex:1}
+  .verChk{display:inline-flex;align-items:center;gap:6px;font-size:.85rem;font-weight:600;cursor:pointer;white-space:nowrap;width:86px;flex:none}
+  .verChk input{accent-color:var(--accent);width:15px;height:15px}
+
   .dateRange{display:flex;align-items:center;gap:8px}
   .dateRange input{flex:1;min-width:0}
   .dateTilde{color:var(--muted);font-size:.9rem;flex:none}
@@ -677,6 +682,17 @@
               <label class="fl">iOS 버전</label>
               <input type="text" id="vIos" placeholder="예: 26.0">
             </div>
+          </div>
+        </div>
+        <div id="vVerApp" style="display:none;margin-top:16px">
+          <label class="fl">Ver <small>등록할 OS를 체크하세요</small></label>
+          <div class="verRow">
+            <label class="verChk"><input type="checkbox" id="vAppAosOn" checked> Android</label>
+            <input type="text" id="vAppAos" placeholder="예: 4.2.0(1042003)">
+          </div>
+          <div class="verRow">
+            <label class="verChk"><input type="checkbox" id="vAppIosOn"> iOS</label>
+            <input type="text" id="vAppIos" placeholder="예: 4.2.0(1042003)">
           </div>
         </div>
         <div id="vVerOne" style="display:none;margin-top:16px">
@@ -1664,13 +1680,7 @@
   var V_SERVERS = ["REAL","STG","QA"];
   function renderVSegs(){
     renderSeg($("vCatSeg"), ["MW","통합앱","PC"], vState.cat, function(v){
-      var prev = vState.cat;
       vState.cat = v;
-      /* 통합앱 ↔ PC 는 서로 다른 버전을 쓰므로 전환할 때만 값 교체 */
-      if(prev !== v && prev !== "MW" && v !== "MW"){
-        var vv = cfg.verifyVer || {};
-        $("vVer").value = (v === "PC") ? (vv.pc || "") : (vv.app || "");
-      }
       renderVSegs(); vUpdate();
     });
     /* 서버는 다중 선택 (클릭할 때마다 켜고 끄기) */
@@ -1693,14 +1703,20 @@
       vState.result = v; renderVSegs(); vUpdate();
     });
     $("vVerMw").style.display = (vState.cat === "MW") ? "" : "none";
-    $("vVerOne").style.display = (vState.cat === "MW") ? "none" : "";
-    $("vVer").placeholder = (vState.cat === "PC") ? "Chrome 버전" : "예: Android 4.2.0(1042003)";
+    $("vVerApp").style.display = (vState.cat === "통합앱") ? "" : "none";
+    $("vVerOne").style.display = (vState.cat === "PC") ? "" : "none";
+    $("vVer").placeholder = "Chrome 버전";
   }
   function vCurrentBlock(){
     var ver = [];
     if(vState.cat === "MW"){
       if($("vAos").value.trim()) ver.push("AOS / " + $("vAos").value.trim());
       if($("vIos").value.trim()) ver.push("IOS / " + $("vIos").value.trim());
+    } else if(vState.cat === "통합앱"){
+      if($("vAppAosOn").checked && $("vAppAos").value.trim())
+        ver.push("Android " + $("vAppAos").value.trim());
+      if($("vAppIosOn").checked && $("vAppIos").value.trim())
+        ver.push("iOS " + $("vAppIos").value.trim());
     } else if($("vVer").value.trim()){
       ver.push($("vVer").value.trim());
     }
@@ -1758,19 +1774,21 @@
     var v = cfg.verifyVer || {};
     $("vAos").value = v.aos || "";
     $("vIos").value = v.ios || "";
-    $("vVer").value = (vState.cat === "PC") ? (v.pc || "") : (v.app || "");
+    $("vAppAos").value = v.appAos || v.app || "";
+    $("vAppIos").value = v.appIos || "";
+    $("vVer").value = v.pc || "";
   }
   function vClearInputs(){
     $("vNote").value = "";
     fillVerDefaults();
   }
   $("vSaveVer").addEventListener("click", function(){
-    var prev = cfg.verifyVer || {};
     cfg.verifyVer = {
       aos: $("vAos").value.trim(),
       ios: $("vIos").value.trim(),
-      app: (vState.cat === "PC") ? (prev.app || "") : $("vVer").value.trim(),
-      pc:  (vState.cat === "PC") ? $("vVer").value.trim() : (prev.pc || "")
+      appAos: $("vAppAos").value.trim(),
+      appIos: $("vAppIos").value.trim(),
+      pc: $("vVer").value.trim()
     };
     autoSave();
     toast("기본 버전 저장 완료 · 다음에 열 때 자동으로 채워져요");
@@ -1825,8 +1843,11 @@
     if(!t){ toast("복사할 내용이 없어요"); return; }
     copy(t, "확인 내용 복사 완료");
   });
-  ["vAos","vIos","vVer","vNote"].forEach(function(id){
+  ["vAos","vIos","vVer","vNote","vAppAos","vAppIos"].forEach(function(id){
     $(id).addEventListener("input", vUpdate);
+  });
+  ["vAppAosOn","vAppIosOn"].forEach(function(id){
+    $(id).addEventListener("change", vUpdate);
   });
 
   /* ── 결과 옵션 편집 ── */
