@@ -359,6 +359,9 @@
   body.dark input[type=date]:focus{background:#0D1116}
   body.dark input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.85)}
 
+  .rtable tr.rTotal td{font-weight:700;border-top:2px solid var(--line);border-bottom:none;padding-top:9px}
+  .rtable tr.rTotal.over td{color:var(--bug)}
+  .rOverTag{font-size:.72rem;font-weight:600;background:var(--bug-soft);color:var(--bug);border-radius:5px;padding:2px 7px;margin-left:6px}
   .rtable td.cell{white-space:pre-wrap;font-family:var(--mono);font-size:.81rem}
 
   /* 가이드 패널 */
@@ -2561,6 +2564,17 @@
         + "</td><td>" + (r.hours ? (+r.hours.toFixed(1)) + "H" : "-")
         + "</td><td class=\"cell\">" + esc(detail) + "</td></tr>";
     });
+    var tc = 0, th = 0;
+    reportItems().forEach(function(name){
+      var r = w.rows[name] || { count:0, hours:0 };
+      tc += r.count; th += r.hours;
+    });
+    var limit = w.days * 8;
+    var over = w.days && th > limit;
+    html += '<tr class="rTotal' + (over ? ' over' : '') + '">'
+          + '<td>합계</td><td>' + tc + '</td><td>' + (+th.toFixed(1)) + 'H'
+          + (over ? ' <span class="rOverTag">' + limit + 'H 초과</span>' : '')
+          + '</td><td></td></tr>';
     $("wkTable").innerHTML = html;
   }
   function weekText(){
@@ -2878,11 +2892,19 @@
   function rptUpdate(){
     var vals = rptValues();
     var html = "<tr><th>항목</th><th>건수</th><th>내용</th></tr>";
+    var totalH = 0;
     reportItems().forEach(function(name){
       var v = vals[name] || {count:"", time:"", note:""};
+      totalH += parseHours(v.time);
       html += "<tr><td>" + esc(name) + "</td><td>" + esc(v.count.trim() || "0")
             + "</td><td class=\"cell\">" + esc(rptCell(v)) + "</td></tr>";
     });
+    if(totalH){
+      var over = totalH > 8;
+      html += '<tr class="rTotal' + (over ? ' over' : '') + '">'
+            + '<td>합계</td><td></td><td>' + (+totalH.toFixed(1)) + 'H'
+            + (over ? ' <span class="rOverTag">8H 초과</span>' : '') + '</td></tr>';
+    }
     $("rptTable").innerHTML = html;
   }
   $("rptCopy").addEventListener("click", function(){
