@@ -172,11 +172,11 @@
 <script id="cfg" type="application/json">
 {
   "sections": [
-    {"title":"상세설명","hint":"제목을 그대로 복사하지 말고 조금 더 상세하게","ph":"예: [통합앱][공통] 상품 UI가 노출되지 않는 현상 (Android, iOS 모두 발생)","tall":false,"url":false,"chips":false},
-    {"title":"사전조건","hint":"상품번호 꼭 적어주기!","ph":"예: 상품번호 1000012345678","tall":false,"url":false,"chips":false},
-    {"title":"재현경로","hint":"주소값 꼭 넣기 · 마지막에 확인 내용 작성","ph":"1. 메인 > 모듈매장\n   https://...\n2. 유닛명 > ...\n3. 확인 내용","tall":true,"url":true,"chips":false},
+    {"title":"상세설명","hint":"제목보다 조금 더 상세하게 작성해주세요","ph":"예: [통합앱][공통] 상품 UI가 노출되지 않는 현상 (Android, iOS 모두 발생)","tall":false,"url":false,"chips":false},
+    {"title":"사전조건","hint":"","ph":"예: 상품번호 1000012345678","tall":false,"url":false,"chips":false},
+    {"title":"재현경로","hint":"주소값을 꼭 넣어주세요","ph":"1. 메인 > 모듈매장\n   https://...\n2. 유닛명 > ...\n3. 확인 내용","tall":true,"url":true,"chips":false},
     {"title":"기대결과","hint":"","ph":"예: 상품 > 혜택이 노출되어야 함","tall":false,"url":false,"chips":false},
-    {"title":"참고사항","hint":"다른 영향 범위도 확인해서 작성","ph":"비교 확인, 서버별 재현, 몰/유닛 영향 범위 등","tall":true,"url":false,"chips":true}
+    {"title":"참고사항","hint":"다른 영향 범위도 확인해서 작성해주세요","ph":"비교 확인, 서버별 재현, 몰/유닛 영향 범위 등","tall":true,"url":false,"chips":true}
   ],
   "chips": [
     {"label":"iOS/AOS 비교","text":"iOS, AOS 비교 확인: "},
@@ -189,7 +189,7 @@
   "devices": [],
   "verifyVer": {"aos": "", "ios": "", "app": ""},
   "theme": "light",
-  "verifyResults": ["Done","Fail","By Design"],
+  "verifyResults": ["Done","FAIL"],
   "verifyChips": ["하여 Done 처리","하여 Reopen 처리"],
   "reportItems": ["TC 작성","Test DATA 셋팅","TC 수행","이슈 등록","이슈 확인","Declined 이슈","기타"],
   "reportChips": ["- 팀 오전회의(0.5H)","- 모니터링(0.5H)","- 정기배포 참여","- 교육/세미나"]
@@ -600,16 +600,71 @@
       if(s.chips){
         var qc = document.createElement("div");
         qc.className = "quickchips";
-        cfg.chips.forEach(function(ch){
-          var b = document.createElement("button");
-          b.type = "button"; b.textContent = "+ " + ch.label;
-          b.addEventListener("click", function(){
-            ta.value = (ta.value ? ta.value.replace(/\s*$/,"") + "\n" : "") + ch.text;
-            ta.focus(); update();
+        var qcEditBox = document.createElement("div");
+        qcEditBox.style.cssText = "display:none;margin-top:8px;border:1px solid var(--accent);border-radius:10px;padding:12px";
+        var qcHint = document.createElement("div");
+        qcHint.className = "hint"; qcHint.style.margin = "0 0 8px";
+        qcHint.textContent = '한 줄에 하나씩 "라벨 | 삽입할 문구" 형식으로 적으세요. 적용하면 자동 저장돼요.';
+        var qcTa = document.createElement("textarea");
+        qcTa.style.cssText = "min-height:100px;font-family:var(--mono);font-size:.8rem";
+        var qcFoot = document.createElement("div");
+        qcFoot.className = "editorFoot"; qcFoot.style.marginTop = "8px";
+
+        function renderSecChips(){
+          qc.innerHTML = "";
+          cfg.chips.forEach(function(ch, ci){
+            var grp = document.createElement("span");
+            grp.style.cssText = "display:inline-flex;align-items:stretch";
+            var b = document.createElement("button");
+            b.type = "button"; b.textContent = "+ " + ch.label;
+            b.style.cssText = "border-top-right-radius:0;border-bottom-right-radius:0;border-right:none";
+            b.addEventListener("click", function(){
+              ta.value = (ta.value ? ta.value.replace(/\s*$/,"") + "\n" : "") + ch.text;
+              ta.focus(); update();
+            });
+            var x = document.createElement("button");
+            x.type = "button"; x.textContent = "✕";
+            x.title = "이 문구 삭제";
+            x.style.cssText = "border-top-left-radius:0;border-bottom-left-radius:0;padding-left:6px;padding-right:7px";
+            x.addEventListener("click", function(){
+              cfg.chips.splice(ci, 1);
+              renderSecChips(); autoSave();
+              toast("문구를 삭제했어요");
+            });
+            grp.appendChild(b); grp.appendChild(x);
+            qc.appendChild(grp);
           });
-          qc.appendChild(b);
+          var eb = document.createElement("button");
+          eb.type = "button"; eb.textContent = "✎ 문구 편집";
+          eb.style.borderStyle = "solid";
+          eb.addEventListener("click", function(){
+            if(qcEditBox.style.display === "block"){ qcEditBox.style.display = "none"; return; }
+            qcTa.value = cfg.chips.map(function(c){ return c.label + " | " + c.text; }).join("\n");
+            qcEditBox.style.display = "block";
+          });
+          qc.appendChild(eb);
+        }
+        var qcApply = document.createElement("button");
+        qcApply.type = "button"; qcApply.className = "btn primary sm"; qcApply.textContent = "적용";
+        qcApply.addEventListener("click", function(){
+          var items = qcTa.value.split("\n").map(function(l){ return l.trim(); }).filter(Boolean)
+            .map(function(l){
+              var i = l.indexOf("|");
+              if(i === -1) return { label:l, text:l };
+              return { label:l.slice(0,i).trim(), text:l.slice(i+1).trim() };
+            });
+          if(!items.length){ toast("문구가 비어 있어요"); return; }
+          cfg.chips = items;
+          renderSecChips(); autoSave();
+          toast("문구가 적용됐어요");
         });
-        area.appendChild(qc);
+        var qcClose = document.createElement("button");
+        qcClose.type = "button"; qcClose.className = "btn ghost sm"; qcClose.textContent = "닫기";
+        qcClose.addEventListener("click", function(){ qcEditBox.style.display = "none"; });
+        qcFoot.appendChild(qcApply); qcFoot.appendChild(qcClose);
+        qcEditBox.appendChild(qcHint); qcEditBox.appendChild(qcTa); qcEditBox.appendChild(qcFoot);
+        renderSecChips();
+        area.appendChild(qc); area.appendChild(qcEditBox);
       }
     });
   }
@@ -1122,7 +1177,7 @@
   $("btnResEdit").addEventListener("click", function(){
     var box = $("resEditor");
     if(box.style.display === "block"){ box.style.display = "none"; return; }
-    $("resEdit").value = ((cfg.verifyResults && cfg.verifyResults.length) ? cfg.verifyResults : ["Done","Fail","By Design"]).join("\n");
+    $("resEdit").value = ((cfg.verifyResults && cfg.verifyResults.length) ? cfg.verifyResults : ["Done","FAIL"]).join("\n");
     box.style.display = "block";
   });
   $("resClose").addEventListener("click", function(){ $("resEditor").style.display = "none"; });
