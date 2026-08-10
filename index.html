@@ -52,7 +52,8 @@
   .logo{width:22px;height:22px;flex:none;display:block}
   header h1{font-size:1.05rem;font-weight:700;letter-spacing:-.01em}
   header .sub{font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-left:auto}
-  .wrap{max-width:1240px;margin:0 auto;padding:24px 20px 80px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+  .wrap{max-width:1560px;margin:0 auto;padding:24px 24px 80px;display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:24px;align-items:start}
+  @media(max-width:1200px){.wrap{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}}
   @media(max-width:960px){.wrap{grid-template-columns:1fr}}
 
   .card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin-bottom:16px}
@@ -174,17 +175,17 @@
   "sections": [
     {"title":"상세설명","hint":"제목보다 조금 더 상세하게 작성해주세요","ph":"예: [통합앱][공통] 상품 UI가 노출되지 않는 현상 (Android, iOS 모두 발생)","tall":false,"url":false,"chips":false},
     {"title":"사전조건","hint":"","ph":"예: 상품번호 1000012345678","tall":false,"url":false,"chips":false},
-    {"title":"재현경로","hint":"주소값을 꼭 넣어주세요","ph":"1. 메인 > 모듈매장\n   https://...\n2. 유닛명 > ...\n3. 확인 내용","tall":true,"url":true,"chips":false},
+    {"title":"재현경로","hint":"주소값을 꼭 넣어주세요 · 엔터 시 번호 자동","ph":"1. 메인 > 모듈매장\n   https://...\n2. 유닛명 > ...\n3. 확인 내용","tall":true,"url":true,"chips":false},
     {"title":"기대결과","hint":"","ph":"예: 상품 > 혜택이 노출되어야 함","tall":false,"url":false,"chips":false},
-    {"title":"참고사항","hint":"다른 영향 범위도 확인해서 작성해주세요","ph":"비교 확인, 서버별 재현, 몰/유닛 영향 범위 등","tall":true,"url":false,"chips":true}
+    {"title":"참고사항","hint":"다른 영향 범위도 확인해서 작성해주세요 · 엔터 시 - 자동","ph":"비교 확인, 서버별 재현, 몰/유닛 영향 범위 등","tall":true,"url":false,"chips":true}
   ],
   "chips": [
-    {"label":"iOS/AOS 비교","text":"iOS, AOS 비교 확인: "},
-    {"label":"Chrome/Edge 비교","text":"Chrome, Edge 비교 확인: "},
-    {"label":"서버별 재현","text":"각 서버 재현 확인 (QA / STG / Real): "},
-    {"label":"몰별 확인","text":"몰별 확인: "},
-    {"label":"발생 유닛 범위","text":"발생 유닛 범위: "},
-    {"label":"첨부 참조","text":"첨부 파일 참조"}
+    {"label":"iOS/AOS 비교","text":"- iOS, AOS 비교 확인: "},
+    {"label":"Chrome/Edge 비교","text":"- Chrome, Edge 비교 확인: "},
+    {"label":"서버별 재현","text":"- 각 서버 재현 확인 (QA / STG / Real): "},
+    {"label":"몰별 확인","text":"- 몰별 확인: "},
+    {"label":"발생 유닛 범위","text":"- 발생 유닛 범위: "},
+    {"label":"첨부 참조","text":"- 첨부 파일 참조"}
   ],
   "devices": [],
   "verifyVer": {"aos": "", "ios": "", "app": ""},
@@ -576,7 +577,34 @@
       ta.addEventListener("input", update);
       area.appendChild(ta);
 
+      /* 재현경로 등 URL 도우미가 붙은 섹션: 엔터 시 자동 번호 매기기 */
       if(s.url){
+        ta.addEventListener("keydown", function(e){
+          if(e.key !== "Enter" || e.shiftKey || e.isComposing) return;
+          var pos = ta.selectionStart;
+          if(pos !== ta.selectionEnd) return;
+          var before = ta.value.slice(0, pos);
+          var lineStart = before.lastIndexOf("\n") + 1;
+          var line = before.slice(lineStart);
+          var m = line.match(/^(\s*)(\d+)\.\s(.*)$/);
+          if(!m) return;
+          e.preventDefault();
+          var indent = m[1], num = parseInt(m[2], 10), body = m[3];
+          var insert;
+          if(!body.trim()){
+            /* 빈 번호 줄에서 엔터 → 번호 해제 */
+            ta.value = ta.value.slice(0, lineStart) + ta.value.slice(pos);
+            ta.selectionStart = ta.selectionEnd = lineStart;
+          } else {
+            insert = "\n" + indent + (num + 1) + ". ";
+            ta.value = before + insert + ta.value.slice(pos);
+            ta.selectionStart = ta.selectionEnd = pos + insert.length;
+          }
+          update();
+        });
+        ta.addEventListener("focus", function(){
+          if(!ta.value) { ta.value = "1. "; ta.selectionStart = ta.selectionEnd = 3; }
+        });
         var uh = document.createElement("div");
         uh.className = "urlhelper";
         var ui = document.createElement("input");
@@ -597,7 +625,31 @@
         area.appendChild(h);
       }
 
+      /* 참고사항 등 빠른 문구 섹션: 엔터 시 '- ' 자동 추가 */
       if(s.chips){
+        ta.addEventListener("keydown", function(e){
+          if(e.key !== "Enter" || e.shiftKey || e.isComposing) return;
+          var pos = ta.selectionStart;
+          if(pos !== ta.selectionEnd) return;
+          var before = ta.value.slice(0, pos);
+          var lineStart = before.lastIndexOf("\n") + 1;
+          var line = before.slice(lineStart);
+          var m = line.match(/^(\s*)-\s(.*)$/);
+          if(!m) return;
+          e.preventDefault();
+          if(!m[2].trim()){
+            ta.value = ta.value.slice(0, lineStart) + ta.value.slice(pos);
+            ta.selectionStart = ta.selectionEnd = lineStart;
+          } else {
+            var insert = "\n" + m[1] + "- ";
+            ta.value = before + insert + ta.value.slice(pos);
+            ta.selectionStart = ta.selectionEnd = pos + insert.length;
+          }
+          update();
+        });
+        ta.addEventListener("focus", function(){
+          if(!ta.value){ ta.value = "- "; ta.selectionStart = ta.selectionEnd = 2; }
+        });
         var qc = document.createElement("div");
         qc.className = "quickchips";
         var qcEditBox = document.createElement("div");
@@ -650,8 +702,11 @@
           var items = qcTa.value.split("\n").map(function(l){ return l.trim(); }).filter(Boolean)
             .map(function(l){
               var i = l.indexOf("|");
-              if(i === -1) return { label:l, text:l };
-              return { label:l.slice(0,i).trim(), text:l.slice(i+1).trim() };
+              var lb, tx;
+              if(i === -1){ lb = l; tx = l; }
+              else { lb = l.slice(0,i).trim(); tx = l.slice(i+1).trim(); }
+              if(!/^-\s/.test(tx)) tx = "- " + tx;
+              return { label: lb.replace(/^-\s*/, ""), text: tx };
             });
           if(!items.length){ toast("문구가 비어 있어요"); return; }
           cfg.chips = items;
@@ -905,8 +960,11 @@
       .map(function(l){ return l.trim(); }).filter(Boolean)
       .map(function(l){
         var i = l.indexOf("|");
-        if(i === -1) return { label:l, text:l };
-        return { label:l.slice(0,i).trim(), text:l.slice(i+1).trim() };
+        var lb, tx;
+        if(i === -1){ lb = l; tx = l; }
+        else { lb = l.slice(0,i).trim(); tx = l.slice(i+1).trim(); }
+        if(!/^-\s/.test(tx)) tx = "- " + tx;
+        return { label: lb.replace(/^-\s*/, ""), text: tx };
       });
     return editCfg;
   }
@@ -1290,7 +1348,8 @@
         var applyBtn = document.createElement("button");
         applyBtn.type = "button"; applyBtn.className = "btn primary sm"; applyBtn.textContent = "적용";
         applyBtn.addEventListener("click", function(){
-          var items = chipTa.value.split("\n").map(function(l){ return l.trim(); }).filter(Boolean);
+          var items = chipTa.value.split("\n").map(function(l){ return l.trim(); }).filter(Boolean)
+            .map(function(l){ return /^-\s/.test(l) ? l : "- " + l; });
           if(!items.length){ toast("문구가 비어 있어요"); return; }
           cfg.reportChips = items;
           renderEtcChips(); autoSave();
