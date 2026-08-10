@@ -146,6 +146,11 @@
   .desc{padding:16px 20px;font-size:.87rem;white-space:pre-wrap;word-break:break-all;font-family:var(--mono);line-height:1.7;max-height:420px;overflow:auto}
   .desc .sect{color:var(--accent);font-weight:700}
   .copybar{display:flex;gap:8px;flex-wrap:wrap;padding:14px 20px;border-top:1px solid var(--line);background:#FAFBFC}
+  .copyWarn{
+    display:none;border-top:1px solid var(--bug);background:var(--bug-soft);color:var(--bug);
+    padding:10px 20px;font-size:.83rem;line-height:1.55;
+  }
+  .copyWarn.on{display:block}
   .attach-reminder{margin-top:14px;background:var(--surface);border:1px dashed var(--line);border-radius:12px;padding:14px 18px;font-size:.8rem;color:var(--muted)}
   .attach-reminder strong{color:var(--ink);font-size:.78rem;font-family:var(--mono);letter-spacing:.06em;display:block;margin-bottom:6px}
   .attach-reminder li{margin-left:18px;margin-top:2px}
@@ -843,6 +848,7 @@
         <div class="ticket-title" id="pvTitle"></div>
       </div>
       <div class="desc" id="pvDesc"></div>
+      <div class="copyWarn" id="bugWarn"></div>
       <div class="copybar">
         <button class="btn primary" id="cpTitle" type="button">제목 복사</button>
         <button class="btn primary" id="cpDesc" type="button">Description 복사</button>
@@ -894,6 +900,23 @@
         </div>
         <div class="copybar">
           <button class="btn primary" id="rptCopy" type="button">보고 내용 복사</button>
+          <button class="btn" id="rptWeekBtn" type="button">📊 주간 집계</button>
+          <button class="btn" id="rptMonthBtn" type="button">📆 월간 집계</button>
+        </div>
+      </div>
+
+      <div class="ticket" id="rptWeekCard" style="display:none;margin-top:14px">
+        <div class="ticket-head" style="display:flex;align-items:center;gap:8px">
+          <button class="btn sm" id="wkPrev" type="button" aria-label="이전 주">‹</button>
+          <div class="ticket-title" id="wkTitle" style="flex:1;text-align:center;font-size:.9rem"></div>
+          <button class="btn sm" id="wkNext" type="button" aria-label="다음 주">›</button>
+        </div>
+        <div style="padding:12px 16px;overflow:auto">
+          <table class="rtable" id="wkTable"></table>
+        </div>
+        <div class="copybar">
+          <button class="btn primary" id="wkCopy" type="button">주간 집계 복사</button>
+          <button class="btn ghost" id="wkClose" type="button">닫기</button>
         </div>
       </div>
       <div class="attach-reminder">
@@ -1281,6 +1304,7 @@
     $("noteServer").style.display = mwapp ? "block" : "none";
     $("scopeCustom").style.display = $("scope").value === "직접 입력" ? "block" : "none";
 
+    if($("bugWarn").classList.contains("on")) showBugWarn();
     $("pvDesc").innerHTML = esc(descText())
       .replace(/^(\[[^\]\n]{1,30}\])$/gm, '<span class="sect">$1</span>');
   }
@@ -1300,10 +1324,41 @@
       navigator.clipboard.writeText(text).then(done, fallback);
     } else fallback();
   }
-  $("cpTitle").addEventListener("click", function(){ copy(fullTitle(), "제목 복사 완료"); });
-  $("cpDesc").addEventListener("click", function(){ copy(descText(), "Description 복사 완료"); });
+  /* 복사 전 필수 항목 확인 */
+  function bugWarnings(){
+    var w = [], vals = secValues();
+    if(!$("title").value.trim()) w.push("제목 내용");
+    var urlSec = null;
+    cfg.sections.forEach(function(s){ if(s.url) urlSec = s.title; });
+    if(urlSec){
+      var v = vals[urlSec] || "";
+      if(!/https?:\/\//i.test(v)) w.push("[" + urlSec + "] 주소값(URL)");
+      else if(!/areainfo_debug=/i.test(v)) w.push("[" + urlSec + "] 디버그모드 파라미터");
+    }
+    cfg.sections.forEach(function(s){
+      if(!(vals[s.title] || "").trim()) w.push("[" + s.title + "] 내용");
+    });
+    return w;
+  }
+  function showBugWarn(){
+    var w = bugWarnings();
+    var box = $("bugWarn");
+    box.innerHTML = "";
+    if(!w.length){ box.className = "copyWarn"; return false; }
+    var t = document.createElement("div");
+    t.innerHTML = "⚠ <b>비어 있는 항목이 있어요</b> — " + w.join(", ");
+    box.appendChild(t);
+    box.className = "copyWarn on";
+    return true;
+  }
+  function copyWithCheck(text, msg){
+    showBugWarn();
+    copy(text, msg);
+  }
+  $("cpTitle").addEventListener("click", function(){ copyWithCheck(fullTitle(), "제목 복사 완료"); });
+  $("cpDesc").addEventListener("click", function(){ copyWithCheck(descText(), "Description 복사 완료"); });
   $("cpAll").addEventListener("click", function(){
-    copy(fullTitle() + "\n\n" + descText(), "전체 복사 완료");
+    copyWithCheck(fullTitle() + "\n\n" + descText(), "전체 복사 완료");
   });
 
   $("btnAddDevice").addEventListener("click", function(){
@@ -1535,6 +1590,7 @@
     var re2 = clone.querySelector("#rptEditor"); if(re2) re2.style.display = "none";
     var re3 = clone.querySelector("#resEditor"); if(re3) re3.style.display = "none";
     var hb = clone.querySelector("#rptPullHelpBox"); if(hb) hb.classList.remove("on");
+    var wc = clone.querySelector("#rptWeekCard"); if(wc) wc.style.display = "none";
     var hd = clone.querySelector("#rptPullHelp"); if(hd) hd.classList.remove("on");
     var re4 = clone.querySelector("#vChipEditor"); if(re4) re4.style.display = "none";
     var gp = clone.querySelector("#guidePanel"); if(gp) gp.classList.remove("open");
@@ -2412,6 +2468,108 @@
       $("bkFile").value = "";
     };
     r.readAsText(f);
+  });
+
+  /* ── 주간 집계 ── */
+  var wkCursor = new Date();
+  var wkMode = "week";   /* week | month */
+  function weekRange(d){
+    var s = new Date(d);
+    s.setDate(d.getDate() - d.getDay() + 1); /* 월요일 시작 */
+    var e = new Date(s); e.setDate(s.getDate() + 6);
+    return [s, e];
+  }
+  function monthRange(d){
+    return [new Date(d.getFullYear(), d.getMonth(), 1),
+            new Date(d.getFullYear(), d.getMonth() + 1, 0)];
+  }
+  function parseHours(txt){
+    var m = String(txt).match(/(\d+(?:\.\d+)?)/);
+    return m ? parseFloat(m[1]) : 0;
+  }
+  function weekData(){
+    var r = (wkMode === "month") ? monthRange(wkCursor) : weekRange(wkCursor);
+    var keys = [];
+    var d = new Date(r[0]);
+    while(d <= r[1]){ keys.push(ymd(d)); d.setDate(d.getDate() + 1); }
+    var rows = {}, days = 0;
+    reportItems().forEach(function(n){ rows[n] = { count:0, hours:0, notes:[] }; });
+    keys.forEach(function(k){
+      var rep = reportStore[k];
+      if(!rep) return;
+      days++;
+      Object.keys(rep).forEach(function(name){
+        if(!rows[name]) rows[name] = { count:0, hours:0, notes:[] };
+        var v = rep[name];
+        rows[name].count += parseInt(v.count, 10) || 0;
+        rows[name].hours += parseHours(v.time);
+        (v.note || "").split("\n").forEach(function(l){
+          if(l.trim()) rows[name].notes.push(l.trim());
+        });
+      });
+    });
+    return { start:r[0], end:r[1], rows:rows, days:days };
+  }
+  function fmtMD(d){ return (d.getMonth() + 1) + "." + d.getDate(); }
+  function renderWeek(){
+    var w = weekData();
+    $("wkTitle").textContent = (wkMode === "month")
+      ? w.start.getFullYear() + "년 " + (w.start.getMonth() + 1) + "월 · 작성 " + w.days + "일"
+      : w.start.getFullYear() + "년 " + fmtMD(w.start) + " ~ " + fmtMD(w.end) + " · 작성 " + w.days + "일";
+    var html = "<tr><th>항목</th><th>건수</th><th>시간</th><th>상세</th></tr>";
+    reportItems().forEach(function(name){
+      var r = w.rows[name] || { count:0, hours:0, notes:[] };
+      var lim = (wkMode === "month") ? 10 : 6;
+      var detail = r.notes.length ? r.notes.slice(0, lim).join("\n")
+        + (r.notes.length > lim ? "\n… 외 " + (r.notes.length - lim) + "건" : "") : "-";
+      html += "<tr><td>" + esc(name) + "</td><td>" + r.count
+        + "</td><td>" + (r.hours ? (+r.hours.toFixed(1)) + "H" : "-")
+        + "</td><td class=\"cell\">" + esc(detail) + "</td></tr>";
+    });
+    $("wkTable").innerHTML = html;
+  }
+  function weekText(){
+    var w = weekData();
+    var head = (wkMode === "month")
+      ? w.start.getFullYear() + "년 " + (w.start.getMonth() + 1) + "월 집계"
+      : w.start.getFullYear() + "년 " + fmtMD(w.start) + " ~ " + fmtMD(w.end) + " 주간 집계";
+    var out = [head, ""];
+    reportItems().forEach(function(name){
+      var r = w.rows[name] || { count:0, hours:0, notes:[] };
+      var line = name + "\t" + r.count + "\t" + (r.hours ? (+r.hours.toFixed(1)) + "H" : "");
+      var cell = r.notes.join("\n");
+      if(cell){
+        if(/[\n"\t]/.test(cell)) cell = '"' + cell.replace(/"/g, '""') + '"';
+        line += "\t" + cell;
+      }
+      out.push(line);
+    });
+    return out.join("\n");
+  }
+  function openAgg(mode){
+    var card = $("rptWeekCard");
+    if(card.style.display === "block" && wkMode === mode){ card.style.display = "none"; return; }
+    wkMode = mode;
+    wkCursor = new Date(rptDate.slice(0,4), +rptDate.slice(5,7) - 1, +rptDate.slice(8,10));
+    $("wkCopy").textContent = (mode === "month") ? "월간 집계 복사" : "주간 집계 복사";
+    renderWeek();
+    card.style.display = "block";
+  }
+  $("rptWeekBtn").addEventListener("click", function(){ openAgg("week"); });
+  $("rptMonthBtn").addEventListener("click", function(){ openAgg("month"); });
+  $("wkClose").addEventListener("click", function(){ $("rptWeekCard").style.display = "none"; });
+  $("wkPrev").addEventListener("click", function(){
+    if(wkMode === "month") wkCursor = new Date(wkCursor.getFullYear(), wkCursor.getMonth() - 1, 1);
+    else wkCursor.setDate(wkCursor.getDate() - 7);
+    renderWeek();
+  });
+  $("wkNext").addEventListener("click", function(){
+    if(wkMode === "month") wkCursor = new Date(wkCursor.getFullYear(), wkCursor.getMonth() + 1, 1);
+    else wkCursor.setDate(wkCursor.getDate() + 7);
+    renderWeek();
+  });
+  $("wkCopy").addEventListener("click", function(){
+    copy(weekText(), (wkMode === "month" ? "월간" : "주간") + " 집계 복사 완료");
   });
 
   /* ── 일일보고 (날짜별 저장) ── */
