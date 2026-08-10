@@ -11,7 +11,8 @@
     --bg:#EEF1F5; --surface:#FFFFFF; --ink:#191D24; --muted:#6E7684;
     --line:#DCE1E9; --accent:#0E7C66; --accent-soft:#E4F2EE;
     --bug:#D6453D; --bug-soft:#FCEBEA; --chip:#14181F; --chip-ink:#F5F7FA;
-    --mono:"JetBrains Mono","Cascadia Mono","SF Mono",Consolas,"D2Coding","Nanum Gothic Coding",monospace;
+    /* 전체 글씨체 통일 — 본문과 동일한 서체 사용 */
+    --mono:Pretendard,"Pretendard Variable",-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html{font-size:16px}
@@ -339,7 +340,7 @@
   /* 날짜 입력 */
   input[type=date]{
     width:100%;border:1px solid var(--line);border-radius:8px;padding:8px 10px;
-    font:inherit;font-size:.9rem;font-family:var(--mono);background:#FBFCFD;color:var(--ink);
+    font:inherit;font-size:.9rem;background:#FBFCFD;color:var(--ink);
     cursor:pointer;position:relative;
   }
   input[type=date]:hover{border-color:var(--muted)}
@@ -873,6 +874,7 @@
       <div class="ownerBtns">
         <a class="btn sm" href="https://ssgtoolchain.atlassian.net/wiki/spaces/em0001151/pages/107781188" target="_blank" rel="noopener">👤 전시 개발 담당자</a>
         <a class="btn sm" href="https://ssgtoolchain.atlassian.net/wiki/spaces/DIAPP/overview?homepageId=85819394" target="_blank" rel="noopener">📱 앱 개발 담당자</a>
+        <a class="btn sm" href="https://ssgtoolchain.atlassian.net/wiki/spaces/em0001151/pages/107833971" target="_blank" rel="noopener">📝 기획 담당자</a>
       </div>
     </div>
     </div><!-- /bugView -->
