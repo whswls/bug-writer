@@ -331,7 +331,7 @@
   .helpBox p b,.helpBox li b{display:inline}
   .helpBox ul{margin:0;padding-left:18px}
   .helpBox li{margin-bottom:3px}
-  .rptSaved{margin-left:auto;font-size:.78rem;color:var(--accent);white-space:nowrap}
+  .rptSaved{margin-left:auto;font-size:.78rem;font-weight:600;color:var(--accent);white-space:nowrap}
   .rItem{margin-bottom:12px}
   .rHead{display:flex;gap:8px;align-items:center;margin-bottom:5px}
   .rHead .rname{flex:1;font-size:.88rem;font-weight:600}
@@ -2824,9 +2824,20 @@
       return (v.count || "").trim() || (v.time || "").trim() || (v.note || "").trim();
     });
     if(has) reportStore[rptDate] = vals; else delete reportStore[rptDate];
-    try{ localStorage.setItem(RPT_KEY, JSON.stringify(reportStore)); }catch(e){}
     var el = $("rptSaved");
-    el.textContent = has ? "저장됨" : "";
+    var ok = true;
+    try{ localStorage.setItem(RPT_KEY, JSON.stringify(reportStore)); }
+    catch(e){ ok = false; }
+    if(!ok){
+      el.textContent = "⚠ 저장 불가 (브라우저 설정 확인)";
+      el.style.color = "var(--bug)";
+      return;
+    }
+    el.style.color = "";
+    if(!has){ el.textContent = ""; return; }
+    var n = new Date();
+    el.textContent = "저장됨 " + String(n.getHours()).padStart(2, "0")
+      + ":" + String(n.getMinutes()).padStart(2, "0");
   }
   function fillPullTarget(){
     var sel = $("rptPullTarget");
@@ -2970,7 +2981,7 @@
               }
               ta.focus();
               ta.selectionStart = ta.selectionEnd = ta.value.length;
-              rptUpdate();
+              rptUpdate(); saveReport();
             });
             chipWrap.appendChild(cb);
           });
