@@ -381,6 +381,14 @@
   .guideBody li{margin-bottom:6px}
   .guideBody code{font-family:var(--mono);font-size:.78rem;background:var(--accent-soft);color:var(--accent);padding:1px 5px;border-radius:4px}
   .gImg{width:100%;height:auto;margin:8px 0 12px;border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:4px}
+  .gLinks{margin:10px 0 4px}
+  .gLinkCard{
+    display:block;border:1px solid var(--line);border-radius:10px;padding:12px 14px;
+    text-decoration:none;color:var(--ink);transition:border-color .15s;
+  }
+  .gLinkCard:hover{border-color:var(--accent)}
+  .gLinkCard b{display:block;font-size:.9rem;margin-bottom:4px;color:var(--accent)}
+  .gLinkCard span{display:block;font-size:.82rem;color:var(--muted);line-height:1.6}
   .gTag{font-size:.66rem;font-weight:700;color:#fff;background:var(--bug);border-radius:999px;padding:2px 8px;vertical-align:2px;margin-left:6px;letter-spacing:.02em}
   .gBox{border:1px solid var(--accent);border-radius:10px;padding:12px 14px;margin:10px 0;background:var(--accent-soft)}
   .gBoxRow{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px}
@@ -581,6 +589,14 @@
         <li>불러오기를 하면 지금 내용에 백업 내용이 <b>합쳐져요.</b> 같은 날짜의 할 일은 백업 쪽으로 바뀌고, 일정은 중복된 건 건너뛰어요.</li>
         <li>PC를 바꾸거나 캐시를 지우기 <b>전에</b> 한 번 저장해두면 안전해요.</li>
       </ul>
+
+      <h4>8. 함께 보면 좋은 문서</h4>
+      <div class="gLinks">
+        <a class="gLinkCard" href="playwright-guide.html" target="_blank" rel="noopener">
+          <b>🎬 Playwright 자동화 세팅 가이드</b>
+          <span>반복적인 QA 작업(로그인, 지면 진입 등)을 자동으로 실행하는 방법. 관리자 권한 없이 설치하고, 녹화 기능으로 코딩 없이 스크립트를 만들 수 있어요.</span>
+        </a>
+      </div>
 
       <div class="gWarn">
         <b>⚠ 수정한 내용이 반영이 안 될 때</b>
