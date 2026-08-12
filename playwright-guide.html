@@ -124,6 +124,14 @@ body{
   padding-top:.14rem;
 }
 .toc a:hover{color:var(--accent)}
+.toc-pre{margin:0 0 .5rem;padding-bottom:.5rem;border-bottom:1px solid var(--rule)}
+.toc-pre a{
+  color:var(--ink);
+  text-decoration:none;
+  font-size:.94rem;
+  font-family:'IBM Plex Sans KR',sans-serif;
+}
+.toc-pre a:hover{color:var(--accent)}
 
 /* ---------- sections ---------- */
 section{margin-bottom:3.5rem;counter-increment:sec}
@@ -325,6 +333,7 @@ a:focus-visible,button:focus-visible,summary:focus-visible{
 
 <nav class="toc" aria-label="목차">
   <h2>목차</h2>
+  <p class="toc-pre"><a href="#s0">00 &nbsp;시작하기 전에 — 명령 창 여는 법</a></p>
   <ol>
     <li><a href="#s1">Node.js 설치</a></li>
     <li><a href="#s2">PowerShell 준비</a></li>
@@ -336,6 +345,43 @@ a:focus-visible,button:focus-visible,summary:focus-visible{
     <li><a href="#s8">더 해보기</a></li>
   </ol>
 </nav>
+
+<section id="s0">
+  <div class="sec-head"><span class="sec-num">00</span><h2>시작하기 전에 — 명령 창 여는 법</h2></div>
+  <p>이 문서의 명령어는 <strong>PowerShell</strong> 또는 <strong>명령 프롬프트(cmd)</strong> 에 입력합니다. 둘 중 아무거나 써도 되고, 여는 방법은 아래와 같습니다.</p>
+
+  <h3>PowerShell 열기</h3>
+  <ul>
+    <li><strong>시작 버튼 우클릭</strong> → <strong>터미널</strong> 또는 <strong>Windows PowerShell</strong></li>
+    <li>또는 <code class="inline">Win + R</code> → <code class="inline">powershell</code> 입력 → 엔터</li>
+    <li>또는 시작 메뉴에서 <strong>powershell</strong> 검색</li>
+  </ul>
+
+  <h3>명령 프롬프트(cmd) 열기</h3>
+  <ul>
+    <li><code class="inline">Win + R</code> → <code class="inline">cmd</code> 입력 → 엔터</li>
+    <li>또는 시작 메뉴에서 <strong>cmd</strong> 검색</li>
+  </ul>
+
+  <h3>특정 폴더 위치에서 바로 열기</h3>
+  <p>경로를 일일이 입력하기 번거로울 때 씁니다. 탐색기에서 원하는 폴더를 연 다음, <strong>주소창에 <code class="inline">cmd</code> 를 입력하고 엔터</strong>를 누르면 그 폴더 위치에서 명령 창이 열립니다.</p>
+
+  <h3>알아두면 편한 것</h3>
+  <table>
+    <thead><tr><th>동작</th><th>방법</th></tr></thead>
+    <tbody>
+      <tr><td>붙여넣기</td><td>마우스 <strong>우클릭</strong> (또는 <code>Ctrl+V</code>)</td></tr>
+      <tr><td>이전 명령 다시 쓰기</td><td><strong>↑ 방향키</strong></td></tr>
+      <tr><td>폴더 이동</td><td><code>cd 경로</code></td></tr>
+      <tr><td>현재 폴더 내용 보기</td><td><code>dir</code></td></tr>
+      <tr><td>화면 지우기</td><td><code>cls</code></td></tr>
+    </tbody>
+  </table>
+  <div class="note">
+    <span class="tag">참고</span>
+    <p>이 문서의 명령어는 회색 상자 안에 있고, 오른쪽 <strong>복사</strong> 버튼을 누르면 그대로 복사됩니다. 명령 창에 우클릭으로 붙여넣고 엔터를 치면 됩니다.</p>
+  </div>
+</section>
 
 <section id="s1">
   <div class="sec-head"><span class="sec-num">01</span><h2>Node.js 설치</h2></div>
