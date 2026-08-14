@@ -3020,16 +3020,19 @@
         row.appendChild(chipWrap); row.appendChild(chipEditBox);
       }
 
-      /* 이슈 등록 항목: 지라 연동 도우미 */
-      if(name.indexOf("이슈 등록") !== -1){
+      /* 이슈 관련 항목: 지라 연동 도우미 */
+      if(/이슈/.test(name)){
         var tools = document.createElement("div");
         tools.className = "editorFoot";
         tools.style.marginTop = "8px";
-        var a = document.createElement("a");
-        a.href = JIRA_TODAY_URL; a.target = "_blank"; a.rel = "noopener";
-        a.className = "btn sm";
-        a.textContent = "📅 오늘 등록한 이슈";
-        a.title = "오늘 내가 등록한 이슈 조회";
+        if(name.indexOf("이슈 등록") !== -1){
+          var a = document.createElement("a");
+          a.href = JIRA_TODAY_URL; a.target = "_blank"; a.rel = "noopener";
+          a.className = "btn sm";
+          a.textContent = "📅 오늘 등록한 이슈";
+          a.title = "오늘 내가 등록한 이슈 조회";
+          tools.appendChild(a);
+        }
         var b = document.createElement("button");
         b.type = "button"; b.className = "btn sm"; b.textContent = "🧹 이슈키만 정리";
         b.addEventListener("click", function(){
@@ -3063,10 +3066,10 @@
           if(!uniq.length){ toast("남는 이슈키가 없어요 · 직접 확인해 주세요"); return; }
           ta.value = uniq.join("\n");
           if(autoCount) autoCount();
-          rptUpdate();
+          rptUpdate(); saveReport();
           toast(uniq.length + "건 정리 완료" + (dropped > 0 ? " (상위 이슈 등 " + dropped + "개 제외)" : ""));
         });
-        tools.appendChild(a); tools.appendChild(b);
+        tools.appendChild(b);
         row.appendChild(tools);
       }
 
