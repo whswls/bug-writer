@@ -361,7 +361,13 @@
 
   .rtable tr.rTotal td{font-weight:700;border-top:2px solid var(--line);border-bottom:none;padding-top:9px}
   .rtable tr.rTotal.over td{color:var(--bug)}
-  .rOverTag{font-size:.72rem;font-weight:600;background:var(--bug-soft);color:var(--bug);border-radius:5px;padding:2px 7px;margin-left:6px}
+  .rOverTag,.rUnderTag,.rOkTag{font-size:.72rem;font-weight:600;border-radius:5px;padding:2px 7px;margin-left:6px}
+  .rOverTag{background:var(--bug-soft);color:var(--bug)}
+  .rUnderTag{background:#FDF1DC;color:#8A5A11}
+  .rOkTag{background:var(--accent-soft);color:var(--accent)}
+  .rtable tr.rTotal.under td{color:#8A5A11}
+  .rtable tr.rTotal.exact td{color:var(--accent)}
+  body.dark .rUnderTag{background:#3A2E17;color:#E8BC72}
   .rtable td.cell{white-space:pre-wrap;font-family:var(--mono);font-size:.81rem}
 
   /* 가이드 패널 */
@@ -3100,10 +3106,15 @@
             + "</td><td class=\"cell\">" + esc(rptCell(v)) + "</td></tr>";
     });
     if(totalH){
-      var over = totalH > 8;
-      html += '<tr class="rTotal' + (over ? ' over' : '') + '">'
-            + '<td>합계</td><td></td><td>' + (+totalH.toFixed(1)) + 'H'
-            + (over ? ' <span class="rOverTag">8H 초과</span>' : '') + '</td></tr>';
+      var t = +totalH.toFixed(1), tag = "", cls = "";
+      if(t > 8){ cls = " over"; tag = ' <span class="rOverTag">8H 초과</span>'; }
+      else if(t < 8){
+        cls = " under";
+        tag = ' <span class="rUnderTag">8H까지 ' + (+(8 - t).toFixed(1)) + 'H 남음</span>';
+      }
+      else { cls = " exact"; tag = ' <span class="rOkTag">8H 정확</span>'; }
+      html += '<tr class="rTotal' + cls + '">'
+            + '<td>합계</td><td></td><td>' + t + 'H' + tag + '</td></tr>';
     }
     $("rptTable").innerHTML = html;
   }
