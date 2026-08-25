@@ -1781,7 +1781,7 @@
   /* ── 이슈 확인 ── */
   var vState = { cat:"MW", servers:["REAL"], result:"Done" };
   var vBlocks = [];
-  var V_SERVERS = ["REAL","STG","QA"];
+  var V_SERVERS = ["QA","STG","REAL"];
   function renderVSegs(){
     renderSeg($("vCatSeg"), ["MW","통합앱","PC"], vState.cat, function(v){
       vState.cat = v;
