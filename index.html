@@ -112,6 +112,13 @@
   .btn.primary:hover{background:#0A6653}
   .btn.ghost{color:var(--muted)}
   .btn.sm{padding:5px 10px;font-size:.8rem;font-weight:500}
+  /* 이슈 저장: 연한 기본색 + 명확한 호버 피드백 */
+  #issueSave{background:var(--accent-soft);color:var(--accent);border-color:var(--accent-soft);transition:background-color .16s ease,border-color .16s ease,box-shadow .16s ease,transform .16s ease}
+  #issueSave:hover{background:#CBE9DE;border-color:var(--accent);box-shadow:0 2px 8px rgba(14,124,102,.14);transform:translateY(-1px)}
+  #issueSave:active{transform:translateY(0);box-shadow:none}
+  #issueSave:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  body.dark #issueSave:hover{background:#205543;border-color:var(--accent);box-shadow:0 2px 8px rgba(74,199,160,.18)}
+  @media(prefers-reduced-motion:reduce){#issueSave{transition:none}#issueSave:hover{transform:none}}
   a.btn{display:inline-flex;align-items:center;text-decoration:none}
   .quickchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
   .quickchips button{border:1px dashed var(--line);background:#FBFCFD;border-radius:6px;padding:4px 9px;font-size:.79rem;cursor:pointer;color:var(--muted)}
@@ -670,6 +677,21 @@
       <div id="descArea"></div>
     </div>
 
+    <!-- 이슈 작성 내역: 설정과 별도 로컬 저장 -->
+    <div class="card" id="issueHistoryCard">
+      <h2>이슈 작성 내역</h2>
+      <div class="hint" style="margin-bottom:8px">작성 중인 내용은 자동 임시저장됩니다. 완료한 이슈는 위의 ‘＋ 이슈 저장’으로 목록에 보관하세요. 다른 PC에서는 백업 파일을 불러오세요.</div><div class="hint" id="issueDraftStatus" aria-live="polite" style="margin-bottom:12px">자동 임시저장 대기 중</div>
+      <div class="editorFoot" style="margin-top:0;margin-bottom:12px">
+        <button class="btn" id="issueUpdate" type="button" disabled>변경 저장</button>
+        <button class="btn sm" id="issueExport" type="button">백업 다운로드</button>
+        <button class="btn sm" id="issueImportBtn" type="button">백업 불러오기</button>
+        <input id="issueImportFile" type="file" accept=".json,application/json" style="display:none">
+      </div>
+      <input id="issueSearch" type="text" placeholder="저장한 이슈 제목 검색" aria-label="저장한 이슈 제목 검색">
+      <div class="hint" id="issueCount" style="margin:8px 0"></div>
+      <div id="issueList"></div>
+    </div>
+
     <!-- ─── 섹션 편집기 ─── -->
     <div class="card" id="editorCard">
       <h2>섹션 설정</h2>
@@ -953,6 +975,7 @@
         <button class="btn primary" id="cpTitle" type="button">제목 복사</button>
         <button class="btn primary" id="cpDesc" type="button">Description 복사</button>
         <button class="btn" id="cpAll" type="button">전체 복사</button>
+        <button class="btn" id="issueSave" type="button">＋ 이슈 저장</button>
       </div>
     </div>
 
@@ -1434,10 +1457,133 @@
     $("noteServer").style.display = mwapp ? "block" : "none";
     $("scopeCustom").style.display = $("scope").value === "직접 입력" ? "block" : "none";
 
+    if(issueDraftReady) issueDraftQueue();
     if($("bugWarn").classList.contains("on")) showBugWarn();
     $("pvDesc").innerHTML = esc(descText())
       .replace(/^(\[[^\]\n]{1,30}\])$/gm, '<span class="sect">$1</span>');
   }
+
+  /* ── 이슈 작성 내역: 수동 저장, 기존 설정과 분리 ── */
+  var ISSUE_KEY = "bugwriter-issues-v1";
+  var issueItems = [];
+  var activeIssueId = null;
+  var loadedIssueSnapshot = null;
+  try {
+    var parsedIssues = JSON.parse(localStorage.getItem(ISSUE_KEY) || "[]");
+    if(Array.isArray(parsedIssues)) issueItems = parsedIssues.filter(function(x){ return x && typeof x.id === "string" && x.data; });
+  } catch(e) { /* 손상된 저장 데이터는 덮어쓰지 않도록 저장 실패 처리 */ }
+  function issueData(){
+    return {cat:state.cat, plat:state.plat, scope:$("scope").value,
+      scopeCustom:$("scopeCustom").value, title:$("title").value,
+      sections:secValues(), devices:JSON.parse(JSON.stringify(chosenDevices))};
+  }
+  /* 작성 중인 이슈만 자동 임시저장 (저장 목록과 별도) */
+  var ISSUE_DRAFT_KEY = "bugwriter-issue-draft-v1";
+  var issueDraftTimer = null;
+  var issueDraftReady = false;
+  function issueDraftSave(){
+    if(!issueDraftReady) return;
+    try {
+      localStorage.setItem(ISSUE_DRAFT_KEY, JSON.stringify({version:1,updated:Date.now(),data:issueData()}));
+      $("issueDraftStatus").textContent="자동 임시저장 완료 · "+issueDate(Date.now());
+    } catch(e) {
+      $("issueDraftStatus").textContent="자동 임시저장 실패 · 저장 공간 또는 브라우저 설정을 확인하세요";
+    }
+  }
+  function issueDraftQueue(){
+    if(!issueDraftReady) return;
+    clearTimeout(issueDraftTimer);
+    $("issueDraftStatus").textContent="변경사항 저장 중…";
+    issueDraftTimer=setTimeout(issueDraftSave,700);
+  }
+  function issueDraftRestore(){
+    try {
+      var saved=JSON.parse(localStorage.getItem(ISSUE_DRAFT_KEY)||"null");
+      if(!saved||saved.version!==1||!saved.data) return;
+      var d=saved.data;
+      if(!MAP[d.cat]) return;
+      state.cat=d.cat;
+      state.plat=MAP[d.cat].plats.includes(d.plat)?d.plat:MAP[d.cat].plats[0];
+      renderCat();renderPlat();renderScope();
+      $("scope").value=Array.from($("scope").options).some(function(o){return o.value===d.scope;})?d.scope:"직접 입력";
+      $("scopeCustom").value=d.scopeCustom||"";
+      $("title").value=d.title||"";
+      chosenDevices=Array.isArray(d.devices)?JSON.parse(JSON.stringify(d.devices)):[];
+      renderDeviceChips();
+      document.querySelectorAll("#descArea textarea.dsec").forEach(function(t){
+        t.value=(d.sections||{})[t.dataset.title]||"";
+      });
+      update();
+      $("issueDraftStatus").textContent="이전 작성 내용 복원됨 · "+issueDate(saved.updated);
+    }catch(e){$("issueDraftStatus").textContent="이전 임시저장 내용을 복원하지 못했습니다.";}
+  }
+  function issueSnapshot(){ return JSON.stringify(issueData()); }
+  function issuePersist(next){
+    try { localStorage.setItem(ISSUE_KEY, JSON.stringify(next)); issueItems=next; return true; }
+    catch(e){ alert("저장 공간이 부족하거나 브라우저 저장이 차단되어 저장하지 못했습니다."); return false; }
+  }
+  function issueDate(ts){ return new Date(ts).toLocaleString("ko-KR"); }
+  function issueRender(){
+    var q=$("issueSearch").value.trim().toLowerCase();
+    var list=$("issueList"); list.replaceChildren();
+    var found=issueItems.slice().sort(function(a,b){return b.updated-a.updated;}).filter(function(x){return (x.label||"").toLowerCase().includes(q);});
+    $("issueCount").textContent="저장된 이슈 " + issueItems.length + "건" + (activeIssueId ? " · 현재 불러온 이슈 있음" : "");
+    $("issueUpdate").disabled=!activeIssueId;
+    if(!found.length){var empty=document.createElement("div");empty.className="hint";empty.textContent="저장된 이슈가 없습니다.";list.appendChild(empty);}
+    found.forEach(function(item){
+      var row=document.createElement("div");row.style.cssText="border:1px solid var(--line);border-radius:9px;padding:11px;margin:8px 0";
+      var name=document.createElement("div");name.style.fontWeight="700";name.style.overflowWrap="anywhere";name.textContent=item.label || "(제목 없음)";row.appendChild(name);
+      var date=document.createElement("div");date.className="hint";date.textContent="수정: "+issueDate(item.updated);row.appendChild(date);
+      var buttons=document.createElement("div");buttons.className="editorFoot";buttons.style.marginTop="8px";
+      var load=document.createElement("button");load.className="btn sm";load.type="button";load.textContent="불러오기";
+      load.addEventListener("click",function(){
+        if(!confirm("현재 작성 중인 내용을 저장하지 않았다면 사라집니다. 불러올까요?")) return;
+        var d=item.data;
+        if(!MAP[d.cat]){alert("지원하지 않는 구분입니다.");return;}
+        state.cat=d.cat;state.plat=MAP[d.cat].plats.includes(d.plat)?d.plat:MAP[d.cat].plats[0];
+        renderCat();renderPlat();renderScope();
+        $("scope").value=Array.from($("scope").options).some(function(o){return o.value===d.scope;})?d.scope:"직접 입력";
+        $("scopeCustom").value=d.scopeCustom||"";$("title").value=d.title||"";
+        chosenDevices=Array.isArray(d.devices)?JSON.parse(JSON.stringify(d.devices)):[];renderDeviceChips();
+        document.querySelectorAll("#descArea textarea.dsec").forEach(function(t){t.value=(d.sections||{})[t.dataset.title]||"";});
+        activeIssueId=item.id;update();loadedIssueSnapshot=issueSnapshot();issueRender();toast("이슈를 불러왔어요");
+      });
+      var del=document.createElement("button");del.className="btn sm ghost";del.type="button";del.textContent="삭제";
+      del.addEventListener("click",function(){if(!confirm("저장된 이슈를 삭제할까요?"))return;
+        if(issuePersist(issueItems.filter(function(x){return x.id!==item.id;}))){if(activeIssueId===item.id){activeIssueId=null;loadedIssueSnapshot=null;}issueRender();toast("삭제했어요");}
+      });
+      buttons.appendChild(load);buttons.appendChild(del);row.appendChild(buttons);list.appendChild(row);
+    });
+  }
+  $("issueSave").addEventListener("click",function(){
+    if(!$("title").value.trim()){alert("제목 내용을 입력해 주세요.");return;}
+    var now=Date.now();var item={id:String(now)+"-"+Math.random().toString(36).slice(2),label:fullTitle(),created:now,updated:now,data:issueData()};
+    if(issuePersist(issueItems.concat([item]))){activeIssueId=item.id;loadedIssueSnapshot=issueSnapshot();issueRender();toast("새 이슈를 저장했어요");}
+  });
+  $("issueUpdate").addEventListener("click",function(){
+    var old=issueItems.find(function(x){return x.id===activeIssueId;});if(!old)return;
+    var next=issueItems.map(function(x){return x.id===activeIssueId?Object.assign({},x,{label:fullTitle(),updated:Date.now(),data:issueData()}):x;});
+    if(issuePersist(next)){loadedIssueSnapshot=issueSnapshot();issueRender();toast("변경사항을 저장했어요");}
+  });
+  $("issueSearch").addEventListener("input",issueRender);
+  $("issueExport").addEventListener("click",function(){
+    var blob=new Blob([JSON.stringify({type:"qa-toolkit-issues",version:1,issues:issueItems},null,2)],{type:"application/json"});
+    var url=URL.createObjectURL(blob);var a=document.createElement("a");a.href=url;a.download="qa-toolkit-issues-"+new Date().toISOString().slice(0,10)+".json";a.click();setTimeout(function(){URL.revokeObjectURL(url);},1000);
+  });
+  $("issueImportBtn").addEventListener("click",function(){$("issueImportFile").click();});
+  $("issueImportFile").addEventListener("change",function(e){
+    var file=e.target.files[0];if(!file)return;
+    var reader=new FileReader();reader.onload=function(){
+      try {var data=JSON.parse(reader.result);if(data.type!=="qa-toolkit-issues"||data.version!==1||!Array.isArray(data.issues))throw Error("형식 오류");
+        if(data.issues.some(function(x){return !x||typeof x.id!=="string"||!x.data||typeof x.data!=="object"||typeof x.label!=="string";}))throw Error("항목 오류");
+        if(!confirm("백업의 이슈 "+data.issues.length+"건을 현재 목록에 병합할까요? 동일 ID는 백업 내용으로 교체됩니다."))return;
+        var map=new Map(issueItems.map(function(x){return [x.id,x];}));data.issues.forEach(function(x){map.set(x.id,x);});
+        if(issuePersist(Array.from(map.values()))){issueRender();toast("백업을 불러왔어요");}
+      }catch(err){alert("올바른 QA Toolkit 이슈 백업 파일이 아닙니다.");}
+      e.target.value="";
+    };reader.onerror=function(){alert("파일을 읽지 못했습니다.");e.target.value="";};reader.readAsText(file);
+  });
+  issueRender();
 
   /* ── 복사 ── */
   function copy(text, msg){
@@ -3158,6 +3304,7 @@
     document.querySelectorAll(".wrap input[type=checkbox]").forEach(function(el){
       if(!el.closest("#editorCard")) el.checked = false;
     });
+    activeIssueId=null; loadedIssueSnapshot=null; issueRender();
     chosenDevices = []; renderDeviceChips();
     state.cat = "통합앱"; state.plat = "Android";
     renderCat(); renderPlat(); renderScope(); update();
@@ -3205,6 +3352,9 @@
   renderTcSegs(); tcUpdate();
   renderEvKind(); renderEvents(); renderLeaveSum(); renderCalendar(); renderTodos(); renderBkNote();
   renderCat(); renderPlat(); renderScope(); renderDeviceSel(); renderDesc(false); update();
+  issueDraftRestore();
+  issueDraftReady=true;
+  window.addEventListener("pagehide",function(){clearTimeout(issueDraftTimer);issueDraftSave();});
 })();
 </script>
 </body>
